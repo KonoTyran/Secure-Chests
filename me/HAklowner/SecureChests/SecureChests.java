@@ -29,9 +29,12 @@ public class SecureChests extends JavaPlugin {
 	public Map<Player, Integer> scCmd = new HashMap<Player, Integer>();
 	public Map<Player, String> scAList = new HashMap<Player, String>();
 
+	
+	//begin chest storage config commands
+	
 	private FileConfiguration storage = null;
 	private File storageConfFile = new File("plugins/SecureChests/", "storage.yml");
-
+	
 	public FileConfiguration getStorageConfig() {
 		if (storage == null) {
 			reloadStorageConfig();
@@ -42,7 +45,6 @@ public class SecureChests extends JavaPlugin {
 	public void reloadStorageConfig() {
 		storage = YamlConfiguration.loadConfiguration(storageConfFile);
 	}
-
 	public void saveStorageConfig() {
 		try {
 			storage.save(storageConfFile);
@@ -50,17 +52,86 @@ public class SecureChests extends JavaPlugin {
 			Logger.getLogger(JavaPlugin.class.getName()).log(Level.SEVERE, "Could not save config to " + storageConfFile, ex);
 		}
 	}
+	
+	//end chest storage config commands
+	
+	//begin player global access list config commands
+	
+	private FileConfiguration aList = null;
+	private File aListConfFile = new File("plugins/SecureChests/", "accesslist.yml");
+	
+	public FileConfiguration getAListConfig() {
+		if (aList == null) {
+			reloadAListConfig();
+		}
+		return aList;
+	}
 
+	public void reloadAListConfig() {
+		aList = YamlConfiguration.loadConfiguration(aListConfFile);
+	}
+
+	public void saveAListConfig() {
+		try {
+			aList.save(aListConfFile);
+		} catch(IOException ex) {
+			Logger.getLogger(JavaPlugin.class.getName()).log(Level.SEVERE, "Could not save config to " + aListConfFile, ex);
+		}
+	}
+	
+	
+	//end player global access list config commands
+
+	public void displayHelp(Player player) {
+		player.sendMessage("======== Secure Chests Help Menu ========");
+		if (player.hasPermission("securechests.lock")) {
+			player.sendMessage("/sc lock (/lock) - lock your chests");
+			player.sendMessage("/sc unlock (/unlock) - unlock your chests");
+			player.sendMessage("/sc add username - Add a user to chest access list");
+			player.sendMessage("/sc deny username - Add a user to chest deny list (will override global access list)");
+			player.sendMessage("/sc gadd username - Add a user to your global allow");
+			player.sendMessage("/sc gremove username - remove user from global allow list");
+			player.sendMessage("/sc remove username - remove a user from chest access list");
+		} else {
+			player.sendMessage("You dont have access lock your chests! :(");
+		}
+		if (player.hasPermission("securechests.reload")) {
+			player.sendMessage("/sc reload - reload config files");
+		}
+		player.sendMessage("=======================================");
+	}
+	
 	public void onEnable() {
 		PluginManager pm = this.getServer().getPluginManager();
 		pm.registerEvent(Event.Type.PLAYER_INTERACT, playerListener, Event.Priority.Normal, this);
 		pm.registerEvent(Event.Type.BLOCK_BREAK, blockListener, Event.Priority.Normal, this);
+		pm.registerEvent(Event.Type.PLAYER_QUIT, playerListener, Event.Priority.Normal, this);
 		log.info("SecureChests Enabled");
 
 	}
 
 	public void onDisable() {
 		log.info("SecureChestsDisabled");
+	}
+	
+	// will return :
+	// 1. exact name if online
+	// 2. partial name if online
+    // 3. if nether are true then return same name given
+	public String myGetPlayerName(String name) { 
+		Player caddPlayer = getServer().getPlayerExact(name);
+		String pName;
+		if(caddPlayer == null) {
+			caddPlayer = getServer().getPlayer(name);
+			if(caddPlayer == null) {
+				pName = name;
+			} else {
+				pName = caddPlayer.getName();
+			}
+		} else {
+			pName = caddPlayer.getName();
+		}
+		return pName;
 	}
 
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
@@ -71,121 +142,128 @@ public class SecureChests extends JavaPlugin {
 
 		if (cmd.getName().equalsIgnoreCase("lock")){ // If the player typed /basic then do the following...
 			if (player == null) {
-				sender.sendMessage("this command can only be run by a player");
+				sender.sendMessage("[Secure Chests] this command can only be run by a player");
 			} else {
 				if (sender.hasPermission("securechests.lock")) {
-					sender.sendMessage("Now open/punch a chest to lock it");
+					sender.sendMessage("[Secure Chests] Now interact with a chest to lock it");
 					scCmd.put(player, 1);
 				} else {
-					sender.sendMessage("You dont have permission to lock your chests");
+					sender.sendMessage("[Secure Chests] You dont have permission to lock your chests");
 				}
 			}
 			return true;
 		} else if (cmd.getName().equalsIgnoreCase("unlock")) {
 			if (player == null) {
-				sender.sendMessage("this command can only be run by a player");
+				sender.sendMessage("[Secure Chests] this command can only be run by a player");
 			} else {
 				if (sender.hasPermission("securechests.lock")) {
-					sender.sendMessage("Now open/punch a chest to unlock it");
+					sender.sendMessage("[Secure Chests] Now interact with a chest to unlock it");
 					scCmd.put(player, 2);
 				} else {
-					sender.sendMessage("You dont have permission to lock your chests");
+					sender.sendMessage("[Secure Chests] You dont have permission to lock your chests");
 				}
 			}
 		} else if (cmd.getName().equalsIgnoreCase("sc") || cmd.getName().equalsIgnoreCase("securechests") || cmd.getName().equalsIgnoreCase("securechest")) {
 			if (player == null) {
-				sender.sendMessage("this command can only be run by a player");
+				sender.sendMessage("[Secure Chests] this command can only be run by a player");
 			} else {
-				if (args.length == 0) { //get help menu
-					sender.sendMessage("======== Secure Chests Help Menu ========");
-					if (sender.hasPermission("securechests.lock")) {
-						sender.sendMessage("/sc lock (/lock) - lock your chests        ");
-						sender.sendMessage("/sc unlock (/unlock) - unlock your chests  ");
-						sender.sendMessage("/sc cadd username - Add a user to chest access list  ");
-						sender.sendMessage("/sc cremove username - remove a user from chest access list  ");
-					} else {
-						sender.sendMessage("You dont have access lock your chests! :(");
-					}
-					sender.sendMessage("=========================================");
-				} else if(args[0].equalsIgnoreCase("help") || args[0].equalsIgnoreCase("?")) { //get help menu
-					sender.sendMessage("======== Secure Chests Help Menu ========");
-					if (sender.hasPermission("securechests.lock")) {
-						sender.sendMessage("/sc lock (/lock) - lock your chests        ");
-						sender.sendMessage("/sc unlock (/unlock) - unlock your chests  ");
-						sender.sendMessage("/sc cadd username - Add a user to chest access list  ");
-						sender.sendMessage("/sc cremove username - remove a user from chest access list  ");
-					} else {
-						sender.sendMessage("You dont have access lock your chests! :(");
-					}
-					sender.sendMessage("=========================================");
+				if(args.length == 0 || args[0].equalsIgnoreCase("help") || args[0].equalsIgnoreCase("?")) { //get help menu
+					displayHelp(player);
 				} else if (args[0].equalsIgnoreCase("lock")) { // Code to activate locking mode.
 					if (sender.hasPermission("securechests.lock")) {
-						sender.sendMessage("Now open/punch a chest to lock it");
+						sender.sendMessage("[Secure Chests] Now interact with a chest to lock it");
 						scCmd.put(player, 1);
 					} else {
-						sender.sendMessage("You dont have permission to lock your chests");
+						sender.sendMessage("[Secure Chests] You dont have permission to lock your chests.");
 					}
-				} else if (args[0].equalsIgnoreCase("unlock")) {
+				} else if (args[0].equalsIgnoreCase("unlock")) { // UNLOCK!
 					if (sender.hasPermission("securechests.lock")) {
-						sender.sendMessage("Now open/punch a chest to unlock it");
+						sender.sendMessage("[Secure Chests] Now interact with a chest to unlock it.");
 						scCmd.put(player, 2);
 					} else {
-						sender.sendMessage("You dont have permission to lock your chests");
+						sender.sendMessage("[Secure Chests] You dont have permission to lock your chests.");
 					}
-				} else if (args[0].equalsIgnoreCase("cadd")) {
+				} else if (args[0].equalsIgnoreCase("add")) {  //Add player to chest access list.
 					if (sender.hasPermission("securechests.lock")) {
 						if (args.length != 2) {
-							sender.sendMessage("Correct command useage: /sc cadd username");
+							sender.sendMessage("[Secure Chests] Correct command useage: /sc add username");
 						} else {
-							Player caddPlayer = getServer().getPlayer(args[1]);
-							String pName;
-							if(caddPlayer == null) {
-								caddPlayer = getServer().getPlayerExact(args[1]);
-								if(caddPlayer == null) {
-									sender.sendMessage("player "+args[1]+" has not logged into this server before! unable to add to access list.");
-									return false;
-								} else {
-									pName = caddPlayer.getName();
-									sender.sendMessage("will add offline user: " + pName + " to next opened chest you own.");
-									
-								}
-							} else {
-								pName = caddPlayer.getName();
-								sender.sendMessage("will add user: " + pName + " to next opened chest you own.");
-							}
+							String pName = myGetPlayerName(args[1]);
+							sender.sendMessage("[Secure Chests] will add user " + pName + " to the next owned chest you interact with.");
 							scAList.put(player , pName);
 							scCmd.put(player, 3);
 						}
 					} 
-				} else if (args[0].equalsIgnoreCase("cremove")) {
+				} else if (args[0].equalsIgnoreCase("remove")) { // Remove player from chest access list
 					if (sender.hasPermission("securechests.lock")) {
 						if (args.length != 2) {
-							sender.sendMessage("Correct command useage: /sc cremove username");
+							sender.sendMessage("[Secure Chests] Correct command useage: /sc remove username");
 						} else {
-							Player caddPlayer = getServer().getPlayer(args[1]);
-							String pName;
-							if(caddPlayer == null) {
-								caddPlayer = getServer().getPlayerExact(args[1]);
-								if(caddPlayer == null) {
-									sender.sendMessage("player "+args[1]+" has not logged into this server before! unable to add to access list.");
-									return false;
-								} else {
-									pName = caddPlayer.getName();
-									sender.sendMessage("will add offline user: " + pName + " to next opened chest you own.");
-									
-								}
-							} else {
-								pName = caddPlayer.getName();
-								sender.sendMessage("will remove user: " + pName + " to next opened chest you own.");
-							}
+							String pName = myGetPlayerName(args[1]);
+							sender.sendMessage("[Secure Chests] will remove user " + pName + " from the next owned chest you interact with.");
 							scAList.put(player , pName);
 							scCmd.put(player, 4);
 						}
 					} else {
+						sender.sendMessage("[Secure Chests] You dont have permission.");
+					}
+				} else if (args[0].equalsIgnoreCase("deny")) { // Remove player from chest access list
+					if (sender.hasPermission("securechests.lock")) {
+						if (args.length != 2) {
+							sender.sendMessage("[Secure Chests] Correct command useage: /sc deny username");
+						} else {
+							String pName = myGetPlayerName(args[1]);
+							sender.sendMessage("[Secure Chests] will add user " + pName + " to the deny list of the next owned chest you interact with.");
+							scAList.put(player , pName);
+							scCmd.put(player, 5);
+						}
+					} else {
+						sender.sendMessage("[Secure Chests] You dont have permission.");
+					}
+				} else if (args[0].equalsIgnoreCase("gadd")) { //Add to global access list!
+					if (sender.hasPermission("securechests.lock")) {
+						if (args.length != 2) {
+							sender.sendMessage("[Secure Chests] Correct command useage: /sc gadd username");
+						} else {
+							String pName = myGetPlayerName(args[1]);
+							
+							if (!getAListConfig().getBoolean(sender.getName()+"." + pName)){
+								sender.sendMessage("[Secure Chests] Adding " + pName + " to your global allow list.");
+								getAListConfig().set(sender.getName()+"." + pName, true);
+								saveAListConfig();
+							} else {
+								player.sendMessage("[Secure Chests] Player "+pName+" already in access list.");
+							}
+						}
+					} else {
 						sender.sendMessage("[Secure Chests] You dont have permission");
 					}
+				} else if (args[0].equalsIgnoreCase("gremove")) { //Add to global access list!
+					if (sender.hasPermission("securechests.lock")) {
+						if (args.length != 2) {
+							sender.sendMessage("[Secure Chests] Correct command useage: /sc gremove username");
+						} else {
+							String pName = myGetPlayerName(args[1]);
+							if (!getAListConfig().getBoolean(sender.getName()+"." + pName)){
+								sender.sendMessage("[Secure Chests] Player " + pName + " Not on your global access list");
+							} else {
+								getAListConfig().set(sender.getName()+"." + pName, null);
+								saveAListConfig();
+								player.sendMessage("[Secure Chests] Player "+pName+" Removed from your global access list.");
+							}
+						}
+					} else {
+						sender.sendMessage("[Secure Chests] You dont have permission");
+					}
+				} else if (args[0].equalsIgnoreCase("reload")) {
+					reloadAListConfig();
+					reloadStorageConfig();
+					reloadConfig();
+					sender.sendMessage("[Secure Chests] Reload complete");
+				} else {
+					sender.sendMessage("[Secure Chests] unknown command. type \"/sc help\" for command list.");
 				}
-			}
+			}//End command checks!
 		}
 		return false;
 	}
