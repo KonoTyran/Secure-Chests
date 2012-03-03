@@ -1,16 +1,17 @@
 package me.HAklowner.SecureChests;
 
-
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerListener;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 
-public class SecureChestsPlayerListener extends PlayerListener{
+public class SecureChestsPlayerListener implements Listener{
 
 	public SecureChests plugin;
 
@@ -18,7 +19,8 @@ public class SecureChestsPlayerListener extends PlayerListener{
 		plugin = instance;
 	}
 	
-	public void onPlayerInteract(PlayerInteractEvent event) {
+	@EventHandler(priority = EventPriority.LOW)
+	public void onPlayerInteract(final PlayerInteractEvent event) {
 		
 		//make sure we are dealing with a block and not clicking on air or an entity
         if (!(event.getAction().equals(Action.LEFT_CLICK_BLOCK) || event.getAction().equals(Action.RIGHT_CLICK_BLOCK)))
@@ -157,7 +159,8 @@ public class SecureChestsPlayerListener extends PlayerListener{
 		} //end check for chest block
 	}//end onPlayerInteract();
 	
-	public void onPlayerQuit(PlayerQuitEvent event) {
+	@EventHandler(priority = EventPriority.LOW)
+	public void onPlayerQuit(final PlayerQuitEvent event) {
 		if (plugin.scAList.get(event.getPlayer()) != null) {
 			plugin.scAList.remove(event.getPlayer());
 		}
