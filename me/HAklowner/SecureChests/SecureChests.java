@@ -11,9 +11,9 @@ import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.FileConfigurationOptions;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -104,14 +104,33 @@ public class SecureChests extends JavaPlugin {
 	
 	public void onEnable() {
 		PluginManager pm = this.getServer().getPluginManager();
-		pm.registerEvent(Event.Type.PLAYER_INTERACT, playerListener, Event.Priority.Normal, this);
-		pm.registerEvent(Event.Type.BLOCK_BREAK, blockListener, Event.Priority.Normal, this);
-		pm.registerEvent(Event.Type.PLAYER_QUIT, playerListener, Event.Priority.Normal, this);
-		pm.registerEvent(Event.Type.BLOCK_PLACE, blockListener, Event.Priority.Normal, this);
-		log.info("SecureChests Enabled");
+		pm.registerEvents(blockListener, this);
+		pm.registerEvents(playerListener, this);
 
+    try{     // if config.yml is missing from package, create your own.
+      FileConfiguration config = getConfig();
+      File SecureChests = new File(getDataFolder(),"config.yml");
+      SecureChests.mkdir();
+      if(!config.contains("Furnace")){
+        config.set("Furnace", false);
+      }
+      if(!config.contains("Door")){
+        config.set("Door", false);
+      }    
+      saveConfig();
+    }catch(Exception e1){
+      e1.printStackTrace();
+    } // END TRY
+    
+    FileConfiguration cfg = getConfig();
+    FileConfigurationOptions cfgOptions = cfg.options();
+    cfgOptions.copyDefaults(true);
+    cfgOptions.copyHeader(true);
+    saveConfig();
+    
+    log.info("SecureChests Enabled");
 	}
-
+		
 	public void onDisable() {
 		log.info("SecureChestsDisabled");
 	}
@@ -119,7 +138,7 @@ public class SecureChests extends JavaPlugin {
 	// will return :
 	// 1. exact name if online
 	// 2. partial name if online
-    // 3. if nether are true then return same name given
+	// 3. if neither are true then return same name given
 	public String myGetPlayerName(String name) { 
 		Player caddPlayer = getServer().getPlayerExact(name);
 		String pName;
