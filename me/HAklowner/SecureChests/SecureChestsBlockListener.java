@@ -5,10 +5,12 @@ import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockListener;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
 
-public class SecureChestsBlockListener extends BlockListener {
+public class SecureChestsBlockListener implements Listener {
 	
 	public SecureChests plugin;
 
@@ -16,7 +18,8 @@ public class SecureChestsBlockListener extends BlockListener {
 		plugin = instance;
 	}
 	
-	public void onBlockPlace(BlockPlaceEvent event) {
+	@EventHandler(priority = EventPriority.LOW)
+	public void onBlockPlace(final BlockPlaceEvent event) {
 		Block b=event.getBlock();
 		if(b.getTypeId() == 54) { //make sure block click is a chest.
 			
@@ -74,7 +77,8 @@ public class SecureChestsBlockListener extends BlockListener {
 		}
 	}
 	
-	public void onBlockBreak(BlockBreakEvent event) {
+	@EventHandler(priority = EventPriority.LOW)	
+	public void onBlockBreak(final BlockBreakEvent event) {
 		Block b=event.getBlock();
 		if(b.getTypeId() == 54) { //make sure block click is a chest.
 			
