@@ -1,0 +1,17 @@
+name: SecureChests
+main: me.HAklowner.SecureChests.SecureChests
+version: 0.4.6
+author: HAklowner
+website: http://dev.bukkit.org/server-mods/secure-chests
+description: SecureChests - Simple chest locking!
+commands:
+   lock:
+      description: lock your chests
+   unlock:
+      description: unlock your chests
+   sc:
+      description: lock your chests securely
+   securechests:
+      description: lock your chests securely
+   securechest:
+      description: lock your chests securely

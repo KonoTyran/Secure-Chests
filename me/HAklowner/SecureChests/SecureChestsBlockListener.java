@@ -170,6 +170,35 @@ public class SecureChestsBlockListener implements Listener {
 				event.setCancelled(true);
 			}
 		}
+		
+    // ########   make sure block click is a DISPENSER   #########
+    else if(b.getTypeId() == 23 && plugin.getConfig().getBoolean("Dispenser")) { //furnace can have two states. off-61 or on-62 check for both
+      Player player = event.getPlayer();
+  
+      Location furnaceloc = b.getLocation();
+
+  
+      //create the YAML string location
+      String yamlloc = furnaceloc.getWorld().getName() + "." + furnaceloc.getBlockX() + "_" + furnaceloc.getBlockY() + "_" + furnaceloc.getBlockZ();
+  
+      //get owner name if any
+      String lockname = plugin.getStorageConfig().getString(yamlloc.concat(".owner"));
+        if(lockname == null) 
+          return;
+  
+        if(lockname.equals(player.getName())) {
+          player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Dispenser lock removed.");
+        plugin.getStorageConfig().set(yamlloc, null);
+        plugin.saveStorageConfig();
+      } else if (player.hasPermission("SecureChests.bypass.break")) {
+        player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Bypassing lock and removing Dispenser owned by: ".concat(lockname));
+        plugin.getStorageConfig().set(yamlloc, null);
+        plugin.saveStorageConfig();
+      } else {
+        player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Unable to break Dispenser owned by: ".concat(lockname));
+        event.setCancelled(true);
+      }
+    }
 			
 		
 		// ########   make sure block click is a DOOR   #########

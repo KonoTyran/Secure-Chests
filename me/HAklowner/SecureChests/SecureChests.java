@@ -82,18 +82,18 @@ public class SecureChests extends JavaPlugin {
 	public void displayHelp(Player player) {
 		player.sendMessage(ChatColor.GOLD + "----- Secure Chests " + getDescription().getVersion() + " -----");
 		if (player.hasPermission("securechests.lock")) {
-			player.sendMessage(ChatColor.WHITE + "/sc lock (/lock)" + ChatColor.GRAY + " - lock your chests");
-			player.sendMessage(ChatColor.WHITE + "/sc unlock (/unlock)" + ChatColor.GRAY + " - unlock your chests");
-			player.sendMessage(ChatColor.WHITE + "/sc add username" + ChatColor.GRAY + " - Add a user to chest access list");
-			player.sendMessage(ChatColor.WHITE + "/sc deny username" + ChatColor.GRAY + " - Add a user to chest deny list (will override global access list)");
-			player.sendMessage(ChatColor.WHITE + "/sc gadd username" + ChatColor.GRAY + " - Add a user to your global allow");
-			player.sendMessage(ChatColor.WHITE + "/sc gremove username" + ChatColor.GRAY + " - remove user from global allow list");
-			player.sendMessage(ChatColor.WHITE + "/sc remove username" + ChatColor.GRAY + " - remove a user from chest access list");
+			player.sendMessage(ChatColor.BLUE + "/sc lock (/lock)" + ChatColor.GRAY + " - lock your chests");
+			player.sendMessage(ChatColor.BLUE + "/sc unlock (/unlock)" + ChatColor.GRAY + " - unlock your chests");
+			player.sendMessage(ChatColor.BLUE + "/sc add username" + ChatColor.GRAY + " - Add a user to chest access list");
+			player.sendMessage(ChatColor.BLUE + "/sc deny username" + ChatColor.GRAY + " - Add a user to chest deny list (will override global access list)");
+			player.sendMessage(ChatColor.BLUE + "/sc gadd username" + ChatColor.GRAY + " - Add a user to your global allow");
+			player.sendMessage(ChatColor.BLUE + "/sc gremove username" + ChatColor.GRAY + " - remove user from global allow list");
+			player.sendMessage(ChatColor.BLUE + "/sc remove username" + ChatColor.GRAY + " - remove a user from chest access list");
 		} else {
 			player.sendMessage(ChatColor.RED + "You dont have access to lock your chests! :(");
 		}
 		if (player.hasPermission("securechests.reload")) {
-			player.sendMessage(ChatColor.WHITE + "/sc reload" + ChatColor.GRAY + " - reload config files");
+			player.sendMessage(ChatColor.BLUE + "/sc reload" + ChatColor.GRAY + " - reload config files");
 		}
 	}
 
@@ -113,7 +113,10 @@ public class SecureChests extends JavaPlugin {
 			}
 			if(!config.contains("Chest")){
 				config.set("Chest", true);
-			}    
+			}
+	     if(!config.contains("Dispenser")){
+	        config.set("Dispenser", true);
+	      }
 			saveConfig();
 		}catch(Exception e1){
 			e1.printStackTrace();
@@ -130,7 +133,7 @@ public class SecureChests extends JavaPlugin {
 	
 	
 	public void onDisable() {
-		log.info("SecureChestsDisabled");
+    log.info("[" + getDescription().getName() + "] " + getDescription().getVersion() + " disabled.");
 	}
 	
 	// will return :
