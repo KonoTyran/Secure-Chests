@@ -1,0 +1,8 @@
+# SecureChests 0.4.6
+# You can now use the following settings to configure
+# SecureChests to lock Chests, Furnaces, Dispensers & Doors.
+# 
+Chest: true
+Furnace: true
+Dispenser: true
+Door: false
