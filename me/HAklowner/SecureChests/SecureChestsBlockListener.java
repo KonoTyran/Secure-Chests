@@ -1,6 +1,5 @@
 package me.HAklowner.SecureChests;
 
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -73,7 +72,7 @@ public class SecureChestsBlockListener implements Listener {
 
 	
 			if(lockname.equals(player.getName())) {
-				player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Chest lock extended.");
+				plugin.displayMessage(player, "Chest lock extended.");
 				if (chestChange) {
 					plugin.getStorageConfig().set(yamlOldLoc, null);
 					plugin.getStorageConfig().set(yamlNewLoc+".owner", lockname);
@@ -81,7 +80,7 @@ public class SecureChestsBlockListener implements Listener {
 				
 				plugin.saveStorageConfig();
 			} else {
-				player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Unable to modify chest owned by: ".concat(lockname));
+				plugin.displayMessage(player, "Unable to modify chest owned by ".concat(lockname));
 				event.setCancelled(true);
 			}
 		}
@@ -90,123 +89,78 @@ public class SecureChestsBlockListener implements Listener {
 	@EventHandler(priority = EventPriority.LOW)	
 	public void onBlockBreak(final BlockBreakEvent event) {
 
-		Block b=event.getBlock();
-		
-		// ########   make sure block click is a CHEST   #########
-		if(b.getTypeId() == 54 && plugin.getConfig().getBoolean("Chest")) {
-			
-			Player player = event.getPlayer();
-			
-			Location chestloc = b.getLocation();
-			
-			//START double chest detection
-			Location ccN = b.getLocation();
-			Location ccE = b.getLocation();
-			Location ccS = b.getLocation();
-			Location ccW = b.getLocation();
-			
-			ccN = ccN.subtract(0,0,1);
-			ccE = ccE.subtract(1,0,0);
-			ccS = ccS.add(0,0,1);
-			ccW = ccW.add(1,0,0);
-			
-			if (ccN.getBlock().getTypeId() == 54) {
-				chestloc = chestloc.subtract(0, 0, 1);
-			} else if (ccE.getBlock().getTypeId() == 54) {
-				chestloc = chestloc.subtract(1, 0, 0);
-			}
-			
-			//END double chest detection
-			
-			
-			//create the YAML string location
-			String yamlloc = chestloc.getWorld().getName() + "." + chestloc.getBlockX() + "_" + chestloc.getBlockY() + "_" + chestloc.getBlockZ();
-			
-			//get owner name if any
-			String lockname = plugin.getStorageConfig().getString(yamlloc.concat(".owner"));
-			if(lockname == null) 
-				return; // no owner no need to continue
-	
-			if(lockname.equals(player.getName())) {
-				player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Chest lock removed.");
-				plugin.getStorageConfig().set(yamlloc, null);
-				plugin.saveStorageConfig();
-			} else if (player.hasPermission("SecureChests.bypass.break")) {
-				player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Bypassing lock and removing chest owned by: ".concat(lockname));
-				plugin.getStorageConfig().set(yamlloc, null);
-				plugin.saveStorageConfig();
-			} else {
-				player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Unable to break chest owned by: ".concat(lockname));
-				event.setCancelled(true);
-			}
-			
-		}
-		
-		// ########   make sure block click is a FURNACE   #########
-		else if(b.getTypeId() == 61 || b.getTypeId() == 62 && plugin.getConfig().getBoolean("Furnace")) { //furnace can have two states. off-61 or on-62 check for both
-			Player player = event.getPlayer();
-  
-			Location furnaceloc = b.getLocation();
+		Block b = event.getBlock();
+        Player player = event.getPlayer();
 
-  
-			//create the YAML string location
-			String yamlloc = furnaceloc.getWorld().getName() + "." + furnaceloc.getBlockX() + "_" + furnaceloc.getBlockY() + "_" + furnaceloc.getBlockZ();
-  
-			//get owner name if any
-			String lockname = plugin.getStorageConfig().getString(yamlloc.concat(".owner"));
-				if(lockname == null) 
-					return;
-  
-				if(lockname.equals(player.getName())) {
-					player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Furnace lock removed.");
-				plugin.getStorageConfig().set(yamlloc, null);
-				plugin.saveStorageConfig();
-			} else if (player.hasPermission("SecureChests.bypass.break")) {
-				player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Bypassing lock and removing Furnace owned by: ".concat(lockname));
-				plugin.getStorageConfig().set(yamlloc, null);
-				plugin.saveStorageConfig();
-			} else {
-				player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Unable to break Furnace owned by: ".concat(lockname));
-				event.setCancelled(true);
-			}
-		}
-			
+        //START NEW CODE
+        
+        if((SecureChests.BLOCK_LIST.containsKey(b.getTypeId()) && plugin.blockStatus.get(b.getTypeId())) || (b.getLocation().add(0,1,0).getBlock().getTypeId() == 64 && plugin.blockStatus.get(64))) {//check to see if block clicked is on the watch list and is enabled.
+        	
+        	Location blockLoc = b.getLocation();
+        	
+        	
+        	if(b.getTypeId() == 54) { //do double chest location corrections
+                Location ccN = b.getLocation();
+                Location ccE = b.getLocation();
+                Location ccS = b.getLocation();
+                Location ccW = b.getLocation();
+
+                ccN = ccN.subtract(0,0,1);
+                ccE = ccE.subtract(1,0,0);
+                ccS = ccS.add(0,0,1);
+                ccW = ccW.add(1,0,0);
+
+                //Boolean dchest = false;
+                if (ccN.getBlock().getTypeId() == 54) {
+                    blockLoc = blockLoc.subtract(0, 0, 1);
+                //    dchest = true;
+                } else if (ccE.getBlock().getTypeId() == 54) {
+                    blockLoc = blockLoc.subtract(1, 0, 0);
+                //    dchest = true;
+                } else if (ccS.getBlock().getTypeId() == 54) {
+                //    dchest = true;
+                } else if (ccW.getBlock().getTypeId() == 54) {
+                //    dchest = true;
+                }
+        	} //END Chest location corrections.
+        	
+        	//Start Door Corrections
+        	if (b.getLocation().add(0,1,0).getBlock().getTypeId() == 64) {
+        		blockLoc = blockLoc.add(0,1,0);
+        	}
+        	
+            else if(b.getTypeId() == 64) { //make sure block click is a DOOR
+    			Door d = (Door)b.getState().getData();
+    			
+    			if (d.isTopHalf()) { //You clicked on the top part of the door! correct location to reflect bottom part
+    				blockLoc = blockLoc.subtract(0,1,0);
+    			}
+            }//End Door Corrections
+        	
+        	String blockName = SecureChests.BLOCK_LIST.get(b.getTypeId());
+        	//get name AFTER position corrections!
+        	
+        	Lock lock = new Lock(plugin);
+        	lock.setLocation(blockLoc);
 		
-		// ########   make sure block click is a DOOR   #########
-		else if(b.getTypeId() == 64 && plugin.getConfig().getBoolean("Door")) { 
-			Player player = event.getPlayer();
-			
-			Location doorloc = b.getLocation();
-			
-			Door d = (Door)b.getState().getData();
-			
-			if (d.isTopHalf()) { //You clicked on the top part of the door! correct location to reflect bottom part
-				doorloc = doorloc.subtract(0,1,0);
-			}
-			
-			//Figure out if you clicked on the top or bottom part of the door and only use bottom part as lock reference
-  
-			//create the YAML string location
-			String yamlloc = doorloc.getWorld().getName() + "." + doorloc.getBlockX() + "_" + doorloc.getBlockY() + "_" + doorloc.getBlockZ();
-  
-			//get owner name if any
-			String lockname = plugin.getStorageConfig().getString(yamlloc.concat(".owner"));
-			if(lockname == null) 
-				return; // No owner no need to continue
-  
-				if(lockname.equals(player.getName())) {
-					player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Door lock removed.");
-				plugin.getStorageConfig().set(yamlloc, null);
-				plugin.saveStorageConfig();
-			} else if (player.hasPermission("SecureChests.bypass.break")) {
-				player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Bypassing lock and removing Door owned by: ".concat(lockname));
-				plugin.getStorageConfig().set(yamlloc, null);
-				plugin.saveStorageConfig();
-			} else {
-				player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Unable to break Door owned by: ".concat(lockname));
-				event.setCancelled(true);
-			}
-		}
-	
+        	if(lock.isLocked()) {
+        		//The block has a locked status. lets now get the owner
+        		String owner = lock.getOwner();
+        		Integer access = lock.getAccess(player);
+        		if(access == 1) { //it's yours yay!
+        			lock.unlock();
+        			plugin.displayMessage(player, "Removed lock on " + blockName + ".");
+        			return;
+        		} else if (player.hasPermission("securechests.bypass.break")) { //you have the break bypass.
+        			lock.unlock();
+        			plugin.displayMessage(player, "Breaking " + owner + "'s "+ blockName +".");
+        			return;
+        		} else {
+        			plugin.displayMessage(player, "Can not break " + blockName + " owned by " + owner + ".");
+        			event.setCancelled(true);
+        			return;
+        		}
+        	}
+        }
 	}
 }

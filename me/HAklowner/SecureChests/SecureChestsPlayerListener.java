@@ -1,7 +1,5 @@
 package me.HAklowner.SecureChests;
 
-
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -14,9 +12,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.material.Door;
 
 public class SecureChestsPlayerListener implements Listener{
-
-
-
+	
     public SecureChests plugin;
 
     public SecureChestsPlayerListener(SecureChests instance) {
@@ -32,403 +28,135 @@ public class SecureChestsPlayerListener implements Listener{
 
 
         Block b = event.getClickedBlock();
+        Player player = event.getPlayer();
+
+        //START NEW CODE
         
-        // ### make sure block is a CHEST #### //
-        if(b.getTypeId() == 54 && plugin.getConfig().getBoolean("Chest")) {
-            Player player = event.getPlayer();
-            Location chestloc = b.getLocation();
+        if(SecureChests.BLOCK_LIST.containsKey(b.getTypeId()) && plugin.blockStatus.get(b.getTypeId())) {//check to see if block clicked is on the watch list and is enabled.
+        	
+        	Location blockLoc = b.getLocation();
+        	String blockName = SecureChests.BLOCK_LIST.get(b.getTypeId());
+        	
+        	if(b.getTypeId() == 54) { //do double chest location corrections
+                Location ccN = b.getLocation();
+                Location ccE = b.getLocation();
+                Location ccS = b.getLocation();
+                Location ccW = b.getLocation();
 
-            Location ccN = b.getLocation();
-            Location ccE = b.getLocation();
-            Location ccS = b.getLocation();
-            Location ccW = b.getLocation();
+                ccN = ccN.subtract(0,0,1);
+                ccE = ccE.subtract(1,0,0);
+                ccS = ccS.add(0,0,1);
+                ccW = ccW.add(1,0,0);
 
-            ccN = ccN.subtract(0,0,1);
-            ccE = ccE.subtract(1,0,0);
-            ccS = ccS.add(0,0,1);
-            ccW = ccW.add(1,0,0);
-
-            Boolean dchest = false;
-            if (ccN.getBlock().getTypeId() == 54) {
-                chestloc = chestloc.subtract(0, 0, 1);
-                dchest = true;
-            } else if (ccE.getBlock().getTypeId() == 54) {
-                chestloc = chestloc.subtract(1, 0, 0);
-                dchest = true;
-            } else if (ccS.getBlock().getTypeId() == 54) {
-                dchest = true;
-            } else if (ccW.getBlock().getTypeId() == 54) {
-                dchest = true;
-            }
-
-            //create the YAML string location
-            String yamlloc = chestloc.getWorld().getName() + "." + chestloc.getBlockX() + "_" + chestloc.getBlockY() + "_" + chestloc.getBlockZ();
-
-            //get name of chest owner
-            String lockname = plugin.getStorageConfig().getString(yamlloc.concat(".owner"));
-
+                //Boolean dchest = false;
+                if (ccN.getBlock().getTypeId() == 54) {
+                    blockLoc = blockLoc.subtract(0, 0, 1);
+                //    dchest = true;
+                } else if (ccE.getBlock().getTypeId() == 54) {
+                    blockLoc = blockLoc.subtract(1, 0, 0);
+                //    dchest = true;
+                } else if (ccS.getBlock().getTypeId() == 54) {
+                //    dchest = true;
+                } else if (ccW.getBlock().getTypeId() == 54) {
+                //    dchest = true;
+                }
+        	} //END Chest location corrections.
+        	
+        	//Start Door Corrections
+            else if(b.getTypeId() == 64) { //make sure block click is a DOOR
+    			
+    			Door d = (Door)b.getState().getData();
+    			
+    			if (d.isTopHalf()) { //You clicked on the top part of the door! correct location to reflect bottom part
+    				blockLoc = blockLoc.subtract(0,1,0);
+    			}
+            }//End Door Corrections
+        	
+        	Lock lock = new Lock(plugin);
+        	lock.setLocation(blockLoc);
+        	
+        	
             //get the current /sc command status:
             // 0/null=none
             // 1= lock
             // 2= unlock
             // 3= add to chest access list
             // 4= remove from chest access list
+        	// 5= add to deny list
+        	// 6= lock for other (perms already checked).
             
-            Integer cmdstatus = plugin.scCmd.get(player);
-            if (cmdstatus == null)
-            	cmdstatus = 0;
-
-            //is if it is owned or not
-            if(lockname == null) {
-            	//if not owned and your in /lock mode
-            	if (cmdstatus == 1) {
-            		if (dchest)
-            			player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Double Chest locked.");
-            		else
-            			player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Single Chest locked.");
-            		plugin.getStorageConfig().set(yamlloc.concat(".owner"),player.getName());
-            		plugin.scCmd.remove(player);
-            		plugin.saveStorageConfig();              
-            	} else if(cmdstatus == 6) { //check to see if they want to lock a chest on someone else's behalf
-            		plugin.scCmd.remove(player);
-            		String checkName = plugin.scAList.get(player);
-            		if (dchest) {
-            			player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Double Chest locked for "+checkName);
-           			} else {                        
-           				player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Single Chest locked for "+checkName);
-           				plugin.getStorageConfig().set(yamlloc.concat(".owner"), checkName);
-           				plugin.saveStorageConfig();
-           				plugin.scAList.remove(player);                        
-           			}
-            	}            
-            } else {
-            	//It is owned by someone check if it is yours!
-            	if (player.getName().equals(lockname)) { // it's yours!
-            		if(cmdstatus == 2) {//check to see if they want to unlock this chest.
-            			plugin.getStorageConfig().set(yamlloc, null);
-    	             plugin.scCmd.remove(player);
-    	             player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Chest unlocked");
-    	             plugin.saveStorageConfig();
-                  
-            		} else if(cmdstatus == 3) { //check to see if they want to add a name to the access list.
-            			plugin.scCmd.remove(player);
-            			String checkName = plugin.scAList.get(player);
-                        if (!plugin.getStorageConfig().getBoolean(yamlloc+".access."+checkName)){
-                        	player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Adding "+checkName+" to access list.");
-                        	plugin.getStorageConfig().set(yamlloc+".access."+checkName, true);
-                            plugin.saveStorageConfig();
-                            plugin.scAList.remove(player);
-                        } else {
-                            player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Player "+checkName+" already in access list.");
-                        }
-                    } else if(cmdstatus == 4) { //They want to Remove a name from the access list
-                        plugin.scCmd.remove(player);
-                        String checkName = plugin.scAList.get(player);
-                        if (!plugin.getStorageConfig().getBoolean(yamlloc+".access."+checkName)){
-                            player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Player "+checkName+" Not found in list.");
-                        } else {
-                            player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Player "+checkName+" Removed from list.");
-                            plugin.getStorageConfig().set(yamlloc+".access."+checkName, null);
-                            plugin.saveStorageConfig();
-                            plugin.scAList.remove(player);
-                        }
-                    } else if(cmdstatus == 5) { //check to see if they want to add a name to the deny list.
-                        plugin.scCmd.remove(player);
-                        String checkName = plugin.scAList.get(player);
-                        if (plugin.getStorageConfig().getBoolean(yamlloc+".access."+player.getName()) || plugin.getStorageConfig().get(yamlloc+".access."+player.getName()) == null){
-                        	player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Adding "+checkName+" to deny list.");
-                            plugin.getStorageConfig().set(yamlloc+".access."+checkName, false);
-                            plugin.saveStorageConfig();
-                            plugin.scAList.remove(player);
-                        } else {
-                          player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Player "+checkName+" already in deny list.");
-                        }
-                    
-                    } else {// no commands to be executed just open chest.
-                      player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" You own this Chest");
-                      return;
-                    }
-            	} else { // chest owned by someone else                  
-
-                    //check access list for your name
-
-                	if (plugin.getStorageConfig().getBoolean(yamlloc+".access."+player.getName())){ //You are on the list!
-                		player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" You have access to " + lockname + "'s chest." );
-                		return; //allow you to open it!
-                	} else if (plugin.getStorageConfig().get(yamlloc+".access."+player.getName()) != null) { //You are on the deny list! ohh no!
-                		event.setCancelled(true);
-                    } else if (plugin.getAListConfig().getBoolean(lockname+"." + player.getName())){ // you are on the global allow list! yay!
-                    	player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" You have acces to " + lockname + "'s chest." );
-                        return;
-                    }
-                	if(cmdstatus == 2) {//check to see if they want to unlock this chest.
-  	                    if(player.hasPermission("securechests.bypass.break")) { //check for admin bypass
-  	                    	plugin.getStorageConfig().set(yamlloc, null);
-  	                    	plugin.scCmd.remove(player);
-  	                    	player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests] "+ ChatColor.WHITE + lockname + "'s Chest unlocked");
-  	                    	plugin.saveStorageConfig();
-  	                    	return;                  
-  	                    }
-                	}                    
-                	if(player.hasPermission("securechests.bypass.open")) { //check for admin bypass
-                		player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" bypassing lock owned by player: " + lockname);
-                		event.setCancelled(false);
-                		return;
-                	} else { //no bypass owned by someone else deny entry
-                		player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Can not open chest, owned by:  " + lockname);
-                		if(!(player.hasPermission("securechests.bypass.break") && event.getAction() == Action.LEFT_CLICK_BLOCK)) {
-                			event.setCancelled(true);
-                        }
-                	}
-                }
+            Integer cmdStatus = plugin.scCmd.remove(player);
+            String otherPlayer = plugin.scAList.remove(player);
+            if (cmdStatus == null) {
+            	cmdStatus = 0;
             }
-        } //end check for chest block
-        
-     // ########   make sure block click is a FURNACE   ######### //
-        else if((b.getTypeId() == 61 || b.getTypeId() == 62) && plugin.getConfig().getBoolean("Furnace")) { //furnace can have two states. off-61 or on-62 check for both
-            Player player = event.getPlayer();
-            Location chestloc = b.getLocation();
-
-            //create the YAML string location
-            String yamlloc = chestloc.getWorld().getName() + "." + chestloc.getBlockX() + "_" + chestloc.getBlockY() + "_" + chestloc.getBlockZ();
-
-            //get name of chest owner
-            String lockname = plugin.getStorageConfig().getString(yamlloc.concat(".owner"));
-
-            //get the current /sc command status:
-            // 0/null=none
-            // 1= lock
-            // 2= unlock
-            // 3= add to chest access list
-            // 4= remove from chest access list
-
-            Integer cmdstatus = plugin.scCmd.get(player);
-            if (cmdstatus == null)
-                cmdstatus = 0;
-
-            //is if it is owned or not
-            if(lockname == null) {
-                //if not owned and your in /lock mode
-                if (cmdstatus == 1) {
-                    player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Furnace locked.");
-                    plugin.getStorageConfig().set(yamlloc.concat(".owner"),player.getName());
-                    plugin.scCmd.remove(player);
-                    plugin.saveStorageConfig();
-                } else if(cmdstatus == 6) { //check to see if they want to lock a chest on someone else's behalf
-                  plugin.scCmd.remove(player);
-                  String checkName = plugin.scAList.get(player);
-                    player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Furnace locked for "+checkName);
-                    plugin.getStorageConfig().set(yamlloc.concat(".owner"), checkName);
-                    plugin.saveStorageConfig();
-                    plugin.scAList.remove(player);                        
-                  }                    
-            } else {
-                //It is owned by someone check if it is yours!
-                if (player.getName().equals(lockname)) { // it's yours!
-                    if(cmdstatus == 2) {//check to see if they want to unlock this chest.
-                        plugin.getStorageConfig().set(yamlloc, null);
-                        plugin.scCmd.remove(player);
-                        player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Furnace unlocked");
-                        plugin.saveStorageConfig();
-
-                    } else if(cmdstatus == 3) { //check to see if they want to add a name to the access list.
-                        plugin.scCmd.remove(player);
-                        String checkName = plugin.scAList.get(player);
-                        if (!plugin.getStorageConfig().getBoolean(yamlloc+".access."+checkName)){
-                            player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Adding "+checkName+" to access list.");
-                            plugin.getStorageConfig().set(yamlloc+".access."+checkName, true);
-                            plugin.saveStorageConfig();
-                            plugin.scAList.remove(player);
-                        } else {
-                            player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Player "+checkName+" already in access list.");
-                        }
-                    } else if(cmdstatus == 4) { //They want to Remove a name from the access list
-                        plugin.scCmd.remove(player);
-                        String checkName = plugin.scAList.get(player);
-                        if (!plugin.getStorageConfig().getBoolean(yamlloc+".access."+checkName)){
-                            player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Player "+checkName+" Not found in list.");
-                        } else {
-                            player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Player "+checkName+" Removed from list.");
-                            plugin.getStorageConfig().set(yamlloc+".access."+checkName, null);
-                            plugin.saveStorageConfig();
-                            plugin.scAList.remove(player);
-                        }
-                    } else if(cmdstatus == 5) { //check to see if they want to add a name to the deny list.
-                    	plugin.scCmd.remove(player);
-                    	String checkName = plugin.scAList.get(player);
-                    	if (plugin.getStorageConfig().getBoolean(yamlloc+".access."+player.getName()) || plugin.getStorageConfig().get(yamlloc+".access."+player.getName()) == null){
-                    		player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Adding "+checkName+" to deny list.");
-                            plugin.getStorageConfig().set(yamlloc+".access."+checkName, false);
-                            plugin.saveStorageConfig();
-                            plugin.scAList.remove(player);
-                        } else {
-                            player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Player "+checkName+" already in deny list.");
-                        } 
-                    } else {// no commands to be executed just open chest.
-                        player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" You own this Furnace");
-                        return;
-                    }
-                } else { // chest owned by someone else
-
-                    //check access list for your name
-
-                    if (plugin.getStorageConfig().getBoolean(yamlloc+".access."+player.getName())){ //You are on the list!
-                        player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" You have access to " + lockname + "'s furnace." );
-                        return; //allow you to open it!
-                    } else if (plugin.getStorageConfig().get(yamlloc+".access."+player.getName()) != null) { //You are on the deny list! ohh no!
-                        event.setCancelled(true);
-                    } else if (plugin.getAListConfig().getBoolean(lockname+"." + player.getName())){ // you are on the global allow list! yay!
-                        player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" You have acces to " + lockname + "'s furnace." );
-                        return;
-                    }
-                    if(cmdstatus == 2) {//check to see if they want to unlock this chest.
-                      if(player.hasPermission("securechests.bypass.break")) { //check for admin bypass
-                        plugin.getStorageConfig().set(yamlloc, null);
-                        plugin.scCmd.remove(player);
-                        player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests] "+ ChatColor.WHITE + lockname + "'s Furnace unlocked");
-                        plugin.saveStorageConfig();
-                        return;                  
-                      }
-                    }
-                    if(player.hasPermission("securechests.bypass.open")) { //check for admin bypass
-                        player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" bypassing lock owned by player: " + lockname);
-                        event.setCancelled(false);
-                        return;
-                    } else { //no bypass owned by someone else deny entry
-                        player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Can not open furnace, owned by:  " + lockname);
-                        if(!(player.hasPermission("securechests.bypass.break") && event.getAction() == Action.LEFT_CLICK_BLOCK)) {
-                            event.setCancelled(true);
-                        }
-                    }
-                }
-            }
-        }//end check for furnace block
-
-        else if(b.getTypeId() == 64 && plugin.getConfig().getBoolean("Door")) { //make sure block click is a DOOR
-            Player player = event.getPlayer();
-
-			Location doorloc = b.getLocation();
-			
-			Door d = (Door)b.getState().getData();
-			
-			if (d.isTopHalf()) { //You clicked on the top part of the door! correct location to reflect bottom part
-				doorloc = doorloc.subtract(0,1,0);
-			}
-
-            //create the YAML string location
-            String yamlloc = doorloc.getWorld().getName() + "." + doorloc.getBlockX() + "_" + doorloc.getBlockY() + "_" + doorloc.getBlockZ();
-
-            //get name of chest owner
-            String lockname = plugin.getStorageConfig().getString(yamlloc.concat(".owner"));
-
-            //get the current /sc command status:
-            // 0/null=none
-            // 1= lock
-            // 2= unlock
-            // 3= add to chest access list
-            // 4= remove from chest access list
-
-            Integer cmdstatus = plugin.scCmd.get(player);
-            if (cmdstatus == null)
-                cmdstatus = 0;
-
-            //is if it is owned or not
-            if(lockname == null) {
-                //if not owned and your in /lock mode
-                if (cmdstatus == 1) {
-                    player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Door locked.");
-                    plugin.getStorageConfig().set(yamlloc.concat(".owner"),player.getName());
-                    plugin.scCmd.remove(player);
-                    plugin.saveStorageConfig();
-                } else if(cmdstatus == 6) { //check to see if they want to lock a chest on someone else's behalf
-                  plugin.scCmd.remove(player);
-                  String checkName = plugin.scAList.get(player);
-                    player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Door locked for "+checkName);
-                    plugin.getStorageConfig().set(yamlloc.concat(".owner"), checkName);
-                    plugin.saveStorageConfig();
-                    plugin.scAList.remove(player);                        
-                  }
-            } else {
-                //It is owned by someone check if it is yours!
-                if (player.getName().equals(lockname)) { // it's yours!
-                    if(cmdstatus == 2) {//check to see if they want to unlock this chest.
-                        plugin.getStorageConfig().set(yamlloc, null);
-                        plugin.scCmd.remove(player);
-                        player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Door unlocked");
-                        plugin.saveStorageConfig();
-
-                    } else if(cmdstatus == 3) { //check to see if they want to add a name to the access list.
-                        plugin.scCmd.remove(player);
-                        String checkName = plugin.scAList.get(player);
-                        if (!plugin.getStorageConfig().getBoolean(yamlloc+".access."+checkName)){
-                            player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Adding "+checkName+" to access list.");
-                            plugin.getStorageConfig().set(yamlloc+".access."+checkName, true);
-                            plugin.saveStorageConfig();
-                            plugin.scAList.remove(player);
-                        } else {
-                            player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Player "+checkName+" already in access list.");
-                        }
-                    } else if(cmdstatus == 4) { //They want to Remove a name from the access list
-                        plugin.scCmd.remove(player);
-                        String checkName = plugin.scAList.get(player);
-                        if (!plugin.getStorageConfig().getBoolean(yamlloc+".access."+checkName)){
-                            player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Player "+checkName+" Not found in list.");
-                        } else {
-                            player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Player "+checkName+" Removed from list.");
-                            plugin.getStorageConfig().set(yamlloc+".access."+checkName, null);
-                            plugin.saveStorageConfig();
-                            plugin.scAList.remove(player);
-                        }
-                    } else if(cmdstatus == 5) { //check to see if they want to add a name to the deny list.
-                        plugin.scCmd.remove(player);
-                        String checkName = plugin.scAList.get(player);
-                        if (plugin.getStorageConfig().getBoolean(yamlloc+".access."+player.getName()) || plugin.getStorageConfig().get(yamlloc+".access."+player.getName()) == null){
-                            player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Adding "+checkName+" to deny list.");
-                            plugin.getStorageConfig().set(yamlloc+".access."+checkName, false);
-                            plugin.saveStorageConfig();
-                            plugin.scAList.remove(player);
-                        } else {
-                            player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Player "+checkName+" already in deny list.");
-                        } 
-                    } else {// no commands to be executed just open chest.
-                        player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" You own this Door");
-                        return;
-                    }
-                } else { // chest owned by someone else
-
-                    //check access list for your name
-
-                    if (plugin.getStorageConfig().getBoolean(yamlloc+".access."+player.getName())){ //You are on the list!
-                        player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" You have access to " + lockname + "'s door." );
-                        return; //allow you to open it!
-                    } else if (plugin.getStorageConfig().get(yamlloc+".access."+player.getName()) != null) { //You are on the deny list! ohh no!
-                        event.setCancelled(true);
-                    } else if (plugin.getAListConfig().getBoolean(lockname+"." + player.getName())){ // you are on the global allow list! yay!
-                        player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" You have acces to " + lockname + "'s door." );
-                        return;
-                    }
-                    if(cmdstatus == 2) {//check to see if they want to unlock this chest.
-                    	if(player.hasPermission("securechests.bypass.break")) { //check for admin bypass
-                    		plugin.getStorageConfig().set(yamlloc, null);
-                    		plugin.scCmd.remove(player);
-                    		player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests] "+ ChatColor.WHITE + lockname + "'s Doors unlocked");
-                    		plugin.saveStorageConfig();
-                    		return;                  
-                    	}
-                    }
-                    if(player.hasPermission("securechests.bypass.open")) { //check for admin bypass
-                    	player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" bypassing lock owned by player: " + lockname);
-                    	event.setCancelled(false);
-                    	return;
-                    } else { //no bypass owned by someone else deny entry
-                    	player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Can not open door, owned by:  " + lockname);
-                    	if(!(player.hasPermission("securechests.bypass.break") && event.getAction() == Action.LEFT_CLICK_BLOCK)) {
-                    		event.setCancelled(true);
-                    	}
-                    }
-                }
-            }
-        }//end check for DOOR block
+        	
+        	if(lock.isLocked()) {
+        		//The block has a locked status. lets now get the owner
+        		String owner = lock.getOwner();
+        		Integer access = lock.getAccess(player);
+        		if(access == 1) { //it's yours yay!
+        			if (cmdStatus == 2) {//unlock and stop from further interacton.
+        				lock.unlock();
+        				plugin.displayMessage(player, blockName + " Unlocked.");
+        				event.setCancelled(true); 
+        			} else if (cmdStatus == 3) {
+        				if(lock.addToAccessList(otherPlayer))
+        					plugin.displayMessage(player, otherPlayer + " added to " + blockName + "'s access list.");
+        				else
+        					plugin.displayMessage(player, "Player " + otherPlayer + " already on " + blockName + "'s access list.");
+        				event.setCancelled(true);
+        				return;
+        			} else if (cmdStatus == 4) {
+        				if(lock.removeFromAccessList(otherPlayer))
+        					plugin.displayMessage(player, otherPlayer + " removed from " + blockName + "'s access list.");
+        				else
+        					plugin.displayMessage(player, "Unable to find " + otherPlayer + " on " + blockName + "'s access list.");
+        				event.setCancelled(true);
+        				return;
+        			} else if (cmdStatus == 5) {
+        				if(lock.addToDenyList(otherPlayer))
+        					plugin.displayMessage(player, otherPlayer + " Added to " + blockName + "'s deny list.");
+        				else
+        					plugin.displayMessage(player, "Player " + otherPlayer + " already on " + blockName + "'s deny list.");
+        				event.setCancelled(true);
+        				return;
+        			} else { // no commands to run just open the chest
+        				plugin.displayMessage(player, "You own this " + blockName + ".");
+        				return;
+        			}
+        		} else if (access == 2) { //your on the allow list
+        			if (cmdStatus != 0) { //Trying to run a command on someone else's chest! NO NO!
+        				plugin.displayMessage(player, "Unable to run command on "+blockName+" owned by: "+owner);
+        				event.setCancelled(true);
+        			} else { //No command to run allow them access
+        				plugin.displayMessage(player, "You have acces to " + owner + "'s "+ blockName +".");
+        			}
+        			return;
+        		} else if (access == 3) {
+        			if (cmdStatus == 2 && player.hasPermission("securechests.bypass.unlock")) {
+        				plugin.displayMessage(player, "Bypassing and unlocking "+blockName+" owned by "+owner+".");
+        				lock.unlock();
+        				event.setCancelled(true);
+        			} else {
+        				plugin.displayMessage(player, "bypassing lock owned by " + owner + ".");
+        			}	
+        			return;
+        			
+        		} else {
+        			plugin.displayMessage(player, "Can not open " + blockName + " owned by " + owner + ".");
+        			event.setCancelled(true);
+        			return;
+        		}
+        	} else if (cmdStatus == 1) {
+        		lock.lock(player.getName());
+        		plugin.displayMessage(player, "Locking " + blockName + ".");
+        		event.setCancelled(true);
+        	} else if (cmdStatus == 6) {
+        		lock.lock(otherPlayer);
+        		plugin.displayMessage(player, "Locking " + blockName + " for " + otherPlayer + ".");
+        	}
+        }
     }//end onPlayerInteract();
 
     @EventHandler(priority = EventPriority.LOW)

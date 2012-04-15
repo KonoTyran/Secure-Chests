@@ -2,6 +2,7 @@ package me.HAklowner.SecureChests;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
@@ -22,10 +23,29 @@ public class SecureChests extends JavaPlugin {
 	//ClassListeners
 	private final SecureChestsPlayerListener playerListener = new SecureChestsPlayerListener(this);
 	private final SecureChestsBlockListener blockListener = new SecureChestsBlockListener(this);
+	private final SecureChestsRedstoneListener redstoneListener = new SecureChestsRedstoneListener(this);
 
 	//Define the logger
 	Logger log = Logger.getLogger("Minecraft");
-
+	
+	
+	
+	public static final Map<Integer, String> BLOCK_LIST = createMap();
+	
+	private static Map<Integer, String> createMap() {
+		Map<Integer, String> result = new HashMap<Integer, String>();
+		result.put(23, "dispenser");
+		result.put(54, "chest");
+		result.put(61, "furnace");
+		result.put(62, "furnace");
+		result.put(64, "door");
+		result.put(96, "trapdoor");
+		result.put(107, "fence gate");
+		result.put(117, "potion stand");
+		return Collections.unmodifiableMap(result);	
+	}
+	
+	public Map<Integer, Boolean> blockStatus = new HashMap<Integer, Boolean>();
 	public Map<Player, Integer> scCmd = new HashMap<Player, Integer>();
 	public Map<Player, String> scAList = new HashMap<Player, String>();	
 
@@ -78,17 +98,22 @@ public class SecureChests extends JavaPlugin {
 		}
 	}
 	//end player global access list config commands
+	
+	public void displayMessage(Player player, String Message) {
+		player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]" + ChatColor.WHITE + " " + Message);
+	}
+	
 
 	public void displayHelp(Player player) {
 		player.sendMessage(ChatColor.GOLD + "----- Secure Chests " + getDescription().getVersion() + " -----");
 		if (player.hasPermission("securechests.lock")) {
-			player.sendMessage(ChatColor.WHITE + "/sc lock (/lock)" + ChatColor.GRAY + " - lock your chests");
-			player.sendMessage(ChatColor.WHITE + "/sc unlock (/unlock)" + ChatColor.GRAY + " - unlock your chests");
-			player.sendMessage(ChatColor.WHITE + "/sc add username" + ChatColor.GRAY + " - Add a user to chest access list");
-			player.sendMessage(ChatColor.WHITE + "/sc deny username" + ChatColor.GRAY + " - Add a user to chest deny list (will override global access list)");
+			player.sendMessage(ChatColor.WHITE + "/sc lock (/lock)" + ChatColor.GRAY + " - lock your chests/furnaces/doors/etc...");
+			player.sendMessage(ChatColor.WHITE + "/sc unlock (/unlock)" + ChatColor.GRAY + " - unlock your chests/furnaces/doors/etc...");
+			player.sendMessage(ChatColor.WHITE + "/sc add username" + ChatColor.GRAY + " - Add a user to container/door access list");
+			player.sendMessage(ChatColor.WHITE + "/sc deny username" + ChatColor.GRAY + " - Add a user to chest container/door list (will override global access list)");
+			player.sendMessage(ChatColor.WHITE + "/sc remove username" + ChatColor.GRAY + " - remove a user from container/door access list");
 			player.sendMessage(ChatColor.WHITE + "/sc gadd username" + ChatColor.GRAY + " - Add a user to your global allow");
 			player.sendMessage(ChatColor.WHITE + "/sc gremove username" + ChatColor.GRAY + " - remove user from global allow list");
-			player.sendMessage(ChatColor.WHITE + "/sc remove username" + ChatColor.GRAY + " - remove a user from chest access list");
 		} else {
 			player.sendMessage(ChatColor.RED + "You dont have access to lock your chests! :(");
 		}
@@ -101,10 +126,9 @@ public class SecureChests extends JavaPlugin {
 		PluginManager pm = this.getServer().getPluginManager();
 		pm.registerEvents(blockListener, this);
 		pm.registerEvents(playerListener, this);
+		pm.registerEvents(redstoneListener, this);
 		try{     // if config.yml is missing from package, create your own.
 			FileConfiguration config = getConfig();
-			File SecureChests = new File(getDataFolder(),"config.yml");
-			SecureChests.mkdir();
 			if(!config.contains("Furnace")){
 				config.set("Furnace", true);
 			}
@@ -114,6 +138,18 @@ public class SecureChests extends JavaPlugin {
 			if(!config.contains("Chest")){
 				config.set("Chest", true);
 			}    
+			if(!config.contains("Dispenser")){
+				config.set("Dispenser", false);
+			}  
+			if(!config.contains("Trapdoor")){
+				config.set("Trapdoor", false);
+			}  
+			if(!config.contains("Potion")){
+				config.set("Potion", true);
+			}  
+			if(!config.contains("Gate")){
+				config.set("Gate", true);
+			}  
 			saveConfig();
 		}catch(Exception e1){
 			e1.printStackTrace();
@@ -124,13 +160,68 @@ public class SecureChests extends JavaPlugin {
 		cfgOptions.copyDefaults(true);
 		cfgOptions.copyHeader(true);
 		saveConfig();      
+		
+		blockStatus.clear(); // clear the enable/disabled for all block during initialization.
+		// Get current active block
+		for (Integer key : BLOCK_LIST.keySet() ) { //Start with all block default to disabled.
+			blockStatus.put(key, false);
+		}
+		
+		if(getConfig().getBoolean("Chest"))
+			blockStatus.put(54, true);
+		if(getConfig().getBoolean("Furnace")) {
+			blockStatus.put(61, true);
+			blockStatus.put(62, true);
+		}
+		if(getConfig().getBoolean("Door"))
+			blockStatus.put(64, true);
+		if(getConfig().getBoolean("Dispenser"))
+			blockStatus.put(23, true);
+		if(getConfig().getBoolean("Trapdoor"))
+			blockStatus.put(96, true);
+		if(getConfig().getBoolean("Gate"))
+			blockStatus.put(107, true);
+		if(getConfig().getBoolean("Potion"))
+			blockStatus.put(117, true);
+		
 		// log initilization and continue
 		log.info("[" + getDescription().getName() + "] " + getDescription().getVersion() + " enabled.");    
 	}
 	
+	private void reloadPlugin() {
+    	reloadAListConfig();
+    	reloadStorageConfig();
+    	reloadConfig();
+		blockStatus.clear(); // clear the enable/disabled for all block during initialization.
+		// Get current active block
+		for (Integer key : BLOCK_LIST.keySet() ) { //Start with all block default to disabled.
+			blockStatus.put(key, false);
+		}
+		
+		if(getConfig().getBoolean("Chest"))
+			blockStatus.put(54, true);
+		if(getConfig().getBoolean("Furnace")) {
+			blockStatus.put(61, true);
+			blockStatus.put(62, true);
+		}
+		if(getConfig().getBoolean("Door"))
+			blockStatus.put(64, true);
+		if(getConfig().getBoolean("Dispenser"))
+			blockStatus.put(23, true);
+		if(getConfig().getBoolean("Trapdoor"))
+			blockStatus.put(96, true);
+		if(getConfig().getBoolean("Gate"))
+			blockStatus.put(107, true);
+		if(getConfig().getBoolean("Potion"))
+			blockStatus.put(117, true);
+    	log.info("[" + getDescription().getName() + "] Reload complete");
+	}
 	
 	public void onDisable() {
-		log.info("SecureChestsDisabled");
+		//saveStorageConfig();
+		//saveAListConfig();
+		//saveConfig();
+		log.info("[" + getDescription().getName() + "] " + getDescription().getVersion() + " Disabled."); 
 	}
 	
 	// will return :
@@ -161,70 +252,76 @@ public class SecureChests extends JavaPlugin {
 
 		if (cmd.getName().equalsIgnoreCase("lock")){ // If the player typed /basic then do the following...
 			if (player == null) {
-				sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" this command can only be run by a player");
+				sender.sendMessage("this command can only be run by a player.");
 			} else {
 				if(args.length == 1) {
-					if (sender.hasPermission("securechests.lock.other")) {
-						sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Now interact with a chest to lock it");
+					if (sender.hasPermission("securechests.bypass.lock")) {
 						String pName = myGetPlayerName(args[0]);
+						displayMessage(player, "Now interact with a container/door to lock it for "+pName+".");
 						scAList.put(player, pName);
 						scCmd.put(player, 6);
-					}            
+					} else {
+						displayMessage(player, "You dont have permission to lock other's Blocks!");
+					}
 				} else if (args.length == 0 && sender.hasPermission("securechests.lock")) {
-					sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Now interact with a chest to lock it");
+					displayMessage(player, "Now interact with a container/door to lock it.");
 					scCmd.put(player, 1);
 				} else {
-					sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" You dont have permission to lock your chests");
+					displayMessage(player, "You dont have permission to lock this!");
 				}
 			}
 			return true;
 		} else if (cmd.getName().equalsIgnoreCase("unlock")) {
 				if (player == null) {
-					sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" this command can only be run by a player");
+					displayMessage(player, "this command can only be run by a player.");
 				} else {
 					if (sender.hasPermission("securechests.lock")) {
-						sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Now interact with a chest to unlock it");
+						displayMessage(player, "Now interact with a container/door to unlock it.");
 						scCmd.put(player, 2);
 					} else {
-						sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" You dont have permission to lock your chests");
+						displayMessage(player, "You dont have permission to lock your Blocks!");
 					}
 				}
 		} else if (cmd.getName().equalsIgnoreCase("sc") || cmd.getName().equalsIgnoreCase("securechests") || cmd.getName().equalsIgnoreCase("securechest")) {
 			if (player == null) {
-				sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" this command can only be run by a player");
+				if(args[0].equalsIgnoreCase("reload") ) {
+					reloadPlugin();
+				} else {
+					displayMessage(player, "this command can only be run by a player.");
+				}
 			} else {
 				if(args.length == 0 || args[0].equalsIgnoreCase("help") || args[0].equalsIgnoreCase("?")) { //get help menu
 					displayHelp(player);
 				} else if (args[0].equalsIgnoreCase("lock") && args.length == 1) { // Code to activate locking mode.
 					if (sender.hasPermission("securechests.lock")) {
-						sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Now interact with a chest to lock it");
+						displayMessage(player, "Now interact with a container/door to lock it.");
 						scCmd.put(player, 1);
 					} else {
-						sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" You dont have permission to lock your chests.");
+						displayMessage(player, "You dont have permission to lock your chests.");
 					}
 				} else if(args[0].equalsIgnoreCase("lock") && args.length == 2) {
-					if (sender.hasPermission("securechests.lock.other")) {
-						sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Now interact with a chest to lock it");
+					if (sender.hasPermission("securechests.bypass.lock")) {
 						String pName = myGetPlayerName(args[1]);
+						displayMessage(player, "Now interact with a container/door to lock it for " + pName);
 						scAList.put(player, pName);
 						scCmd.put(player, 6);				 
 					} else {					
-						sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" You dont have permission to lock your chests.");
+						displayMessage(player, "You dont have permission to lock other's Blocks!");
 					}
 	        } else if (args[0].equalsIgnoreCase("unlock")) { // UNLOCK!
 	        	if (sender.hasPermission("securechests.lock")) {
-	        		sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Now interact with a chest to unlock it.");
+	        		displayMessage(player, "Now interact with a container/door to unlock it.");
 	        		scCmd.put(player, 2);
         		} else {
-	        		sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" You dont have permission to lock your chests.");
+	        		displayMessage(player, "You dont have permission to lock your Blocks!");
         		}
 	        } else if (args[0].equalsIgnoreCase("add")) {  //Add player to chest access list.
 	        	if (sender.hasPermission("securechests.lock")) {
 	        		if (args.length != 2) {
-	        			sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Correct command useage: /sc add username");
+	        			displayMessage(player, "Correct command useage: /sc add username");
 	        		} else {
 	        			String pName = myGetPlayerName(args[1]);
-	        			sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" will add user " + pName + " to the next owned chest you interact with.");
+	        			displayMessage(player, "will add user " + pName + " to the next owned block you interact with.");
 	        			scAList.put(player , pName);
 	        			scCmd.put(player, 3);
 	        		}
@@ -232,71 +329,69 @@ public class SecureChests extends JavaPlugin {
 	        } else if (args[0].equalsIgnoreCase("remove")) { // Remove player from chest access list
 	        	if (sender.hasPermission("securechests.lock")) {
 	        		if (args.length != 2) {
-	        			sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Correct command useage: /sc remove username");
+	        			displayMessage(player, "Correct command useage: /sc remove username");
 	        		} else {
 	        			String pName = myGetPlayerName(args[1]);
-	        			sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" will remove user " + pName + " from the next owned chest you interact with.");
+	        			displayMessage(player, "will remove user " + pName + " from the next owned block you interact with.");
 	        			scAList.put(player , pName);
 	        			scCmd.put(player, 4);
 	        		}
 	        	} else {
-	        		sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" You dont have permission.");
+	        		displayMessage(player, "You dont have permission.");
 	        	}
 	        } else if (args[0].equalsIgnoreCase("deny")) { // Remove player from chest access list
 	        	if (sender.hasPermission("securechests.lock")) {
 	        		if (args.length != 2) {
-	        			sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Correct command useage: /sc deny username");
+	        			displayMessage(player, "Correct command useage: /sc deny username");
 	        		} else {
 	        			String pName = myGetPlayerName(args[1]);
-	        			sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" will add user " + pName + " to the deny list of the next owned chest you interact with.");
+	        			displayMessage(player, "will add user " + pName + " to the deny list of the next owned block you interact with.");
 	        			scAList.put(player , pName);
 	        			scCmd.put(player, 5);
 	        		}
 	        	} else {
-	        		sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" You dont have permission.");
+	        		displayMessage(player, "You dont have permission.");
 	        	}
 	        } else if (args[0].equalsIgnoreCase("gadd")) { //Add to global access list!
 	        	if (sender.hasPermission("securechests.lock")) {
 	        		if (args.length != 2) {
-	        			sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Correct command useage: /sc gadd username");
+	        			displayMessage(player, "Correct command useage: /sc gadd username");
 	        		} else {
 	        			String pName = myGetPlayerName(args[1]);
 
 	        			if (!getAListConfig().getBoolean(sender.getName()+"." + pName)){
-	        				sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Adding " + pName + " to your global allow list.");
+	        				displayMessage(player, "Adding " + pName + " to your global allow list.");
 	        				getAListConfig().set(sender.getName()+"." + pName, true);
 	        				saveAListConfig();
 	        			} else {
-	        				player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Player "+pName+" already in access list.");
+	        				displayMessage(player, "Player "+pName+" already in access list.");
 	        			}
 	        		}
 	        	} else {
-	        		sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" You dont have permission");
+	        		displayMessage(player, "You dont have permission");
 	        	}
 	        } else if (args[0].equalsIgnoreCase("gremove")) { //Add to global access list!
 	        	if (sender.hasPermission("securechests.lock")) {
 	        		if (args.length != 2) {
-	        			sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Correct command useage: /sc gremove username");
+	        			displayMessage(player, "Correct command useage: /sc gremove username");
 	        		} else {
 	        			String pName = myGetPlayerName(args[1]);
 	        			if (!getAListConfig().getBoolean(sender.getName()+"." + pName)){
-	        				sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Player " + pName + " Not on your global access list");
+	        				displayMessage(player, "Player " + pName + " Not on your global access list");
 	        			} else {
 	        				getAListConfig().set(sender.getName()+"." + pName, null);
 	        				saveAListConfig();
-	        				player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Player "+pName+" Removed from your global access list.");
+	        				displayMessage(player, "Player "+pName+" Removed from your global access list.");
 	        			}
 	        		}
 	        	} else {
-	        		sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" You dont have permission");
+	        		displayMessage(player, "You dont have permission");
 	        	}
-	        } else if (args[0].equalsIgnoreCase("reload")) {
-	        	reloadAListConfig();
-	        	reloadStorageConfig();
-	        	reloadConfig();
-	        	sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" Reload complete");
+	        } else if (args[0].equalsIgnoreCase("reload") && player.hasPermission("securechests.reload")) {
+	        	reloadPlugin();
+	        	displayMessage(player, "Config Reloaded.");
 	        } else {
-	        	sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]"+ChatColor.WHITE+" unknown command. type \"/sc help\" for command list.");
+	        	displayMessage(player, "Unknown command. type \"/sc help\" for command list.");
 	        }
 			}//End command checks!
 		}
