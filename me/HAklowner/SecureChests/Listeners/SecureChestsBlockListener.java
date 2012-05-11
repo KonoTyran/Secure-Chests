@@ -1,4 +1,7 @@
-package me.HAklowner.SecureChests;
+package me.HAklowner.SecureChests.Listeners;
+
+import me.HAklowner.SecureChests.Lock;
+import me.HAklowner.SecureChests.SecureChests;
 
 import org.bukkit.Location;
 import org.bukkit.block.Block;
@@ -72,7 +75,7 @@ public class SecureChestsBlockListener implements Listener {
 
 	
 			if(lockname.equals(player.getName())) {
-				plugin.displayMessage(player, "Chest lock extended.");
+				plugin.sendMessage(player, "Chest lock extended.");
 				if (chestChange) {
 					plugin.getStorageConfig().set(yamlOldLoc, null);
 					plugin.getStorageConfig().set(yamlNewLoc+".owner", lockname);
@@ -80,7 +83,7 @@ public class SecureChestsBlockListener implements Listener {
 				
 				plugin.saveStorageConfig();
 			} else {
-				plugin.displayMessage(player, "Unable to modify chest owned by ".concat(lockname));
+				plugin.sendMessage(player, "Unable to modify chest owned by ".concat(lockname));
 				event.setCancelled(true);
 			}
 		}
@@ -149,14 +152,14 @@ public class SecureChestsBlockListener implements Listener {
         		Integer access = lock.getAccess(player);
         		if(access == 1) { //it's yours yay!
         			lock.unlock();
-        			plugin.displayMessage(player, "Removed lock on " + blockName + ".");
+        			plugin.sendMessage(player, "Removed lock on " + blockName + ".");
         			return;
         		} else if (player.hasPermission("securechests.bypass.break")) { //you have the break bypass.
         			lock.unlock();
-        			plugin.displayMessage(player, "Breaking " + owner + "'s "+ blockName +".");
+        			plugin.sendMessage(player, "Breaking " + owner + "'s "+ blockName +".");
         			return;
         		} else {
-        			plugin.displayMessage(player, "Can not break " + blockName + " owned by " + owner + ".");
+        			plugin.sendMessage(player, "Can not break " + blockName + " owned by " + owner + ".");
         			event.setCancelled(true);
         			return;
         		}

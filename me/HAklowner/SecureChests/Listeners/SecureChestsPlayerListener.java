@@ -1,5 +1,10 @@
-package me.HAklowner.SecureChests;
+package me.HAklowner.SecureChests.Listeners;
 
+import me.HAklowner.SecureChests.Lock;
+import me.HAklowner.SecureChests.SecureChests;
+import net.sacredlabyrinth.phaed.simpleclans.Clan;
+
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -84,9 +89,14 @@ public class SecureChestsPlayerListener implements Listener{
             // 4= remove from chest access list
         	// 5= add to deny list
         	// 6= lock for other (perms already checked).
+        	// 7= add clan to access list.
+        	// 8= remove clan from access list.
+        	// 9= add clan to deny list.
             
             Integer cmdStatus = plugin.scCmd.remove(player);
             String otherPlayer = plugin.scAList.remove(player);
+            Clan clan = plugin.scClan.remove(player);
+            
             if (cmdStatus == null) {
             	cmdStatus = 0;
             }
@@ -98,63 +108,104 @@ public class SecureChestsPlayerListener implements Listener{
         		if(access == 1) { //it's yours yay!
         			if (cmdStatus == 2) {//unlock and stop from further interacton.
         				lock.unlock();
-        				plugin.displayMessage(player, blockName + " Unlocked.");
+        				plugin.sendMessage(player, blockName + " Unlocked.");
         				event.setCancelled(true); 
         			} else if (cmdStatus == 3) {
         				if(lock.addToAccessList(otherPlayer))
-        					plugin.displayMessage(player, otherPlayer + " added to " + blockName + "'s access list.");
+        					plugin.sendMessage(player, otherPlayer + " added to " + blockName + "'s access list.");
         				else
-        					plugin.displayMessage(player, "Player " + otherPlayer + " already on " + blockName + "'s access list.");
+        					plugin.sendMessage(player, "Player " + otherPlayer + " already on " + blockName + "'s access list.");
+        				event.setCancelled(true);
+        				return;
+        			} else if (cmdStatus == 7) { //add clan to access list.
+        				if(lock.addToAccessList(clan))
+        					plugin.sendMessage(player, "clan " + clan.getTagLabel() + ChatColor.WHITE + " added to " + blockName + "'s access list.");
+        				else
+        					plugin.sendMessage(player, "clan " + clan.getTagLabel() + ChatColor.WHITE + " already on " + blockName + "'s access list.");
+        				event.setCancelled(true);
+        				return;
+        			} else if (cmdStatus == 8) { //remove clan from access list.
+        				if(lock.removeFromAccessList(clan))
+        					plugin.sendMessage(player, "clan " + clan.getTagLabel() + ChatColor.WHITE + " removed from " + blockName + "'s access list.");
+        				else
+        					plugin.sendMessage(player, "Unable to find clan " + clan.getTagLabel() + ChatColor.WHITE + " on " + blockName + "'s access list.");
+        				event.setCancelled(true);
+        				return;
+        			} else if (cmdStatus == 9) { //add clan to deny list.
+        				if(lock.addToDenyList(clan))
+        					plugin.sendMessage(player, "clan " + clan.getTagLabel() + ChatColor.WHITE + " added to " + blockName + "'s deny list.");
+        				else
+        					plugin.sendMessage(player, "clan " + clan.getTagLabel() + ChatColor.WHITE + " already on " + blockName + "'s deny list.");
         				event.setCancelled(true);
         				return;
         			} else if (cmdStatus == 4) {
-        				if(lock.removeFromAccessList(otherPlayer))
-        					plugin.displayMessage(player, otherPlayer + " removed from " + blockName + "'s access list.");
-        				else
-        					plugin.displayMessage(player, "Unable to find " + otherPlayer + " on " + blockName + "'s access list.");
+        				if (otherPlayer.toLowerCase().startsWith("c:")) {
+        					String clanTag = otherPlayer.substring(2);
+							if(lock.removeFromAccessList(otherPlayer)) 
+        						plugin.sendMessage(player, "clan " + clanTag + " removed from " + blockName + "'s access list.");
+							 else 
+        						plugin.sendMessage(player, "Unable to find clan " + clanTag + " on " + blockName + "'s access list.");
+        				} else {
+        					if(lock.removeFromAccessList(otherPlayer))
+        						plugin.sendMessage(player, otherPlayer + " removed from " + blockName + "'s access list.");
+        					else
+        						plugin.sendMessage(player, "Unable to find " + otherPlayer + " on " + blockName + "'s access list.");
+        				}
         				event.setCancelled(true);
         				return;
         			} else if (cmdStatus == 5) {
         				if(lock.addToDenyList(otherPlayer))
-        					plugin.displayMessage(player, otherPlayer + " Added to " + blockName + "'s deny list.");
+        					plugin.sendMessage(player, otherPlayer + " Added to " + blockName + "'s deny list.");
         				else
-        					plugin.displayMessage(player, "Player " + otherPlayer + " already on " + blockName + "'s deny list.");
+        					plugin.sendMessage(player, "Player " + otherPlayer + " already on " + blockName + "'s deny list.");
+        				event.setCancelled(true);
+        				return;
+        			} else if (cmdStatus == 10) { //toggle public status
+        				if(lock.isPublic()) {
+        					lock.setPublic(false);
+        					plugin.sendMessage(player, "making " + blockName + " private.");
+        				} else {
+        					lock.setPublic(true);
+        					plugin.sendMessage(player, "making " + blockName + " public.");
+        				}
         				event.setCancelled(true);
         				return;
         			} else { // no commands to run just open the chest
-        				plugin.displayMessage(player, "You own this " + blockName + ".");
+        				plugin.sendMessage(player, "You own this " + blockName + ".");
         				return;
         			}
         		} else if (access == 2) { //your on the allow list
         			if (cmdStatus != 0) { //Trying to run a command on someone else's chest! NO NO!
-        				plugin.displayMessage(player, "Unable to run command on "+blockName+" owned by: "+owner);
+        				plugin.sendMessage(player, "Unable to run command on "+blockName+" owned by: "+owner);
         				event.setCancelled(true);
         			} else { //No command to run allow them access
-        				plugin.displayMessage(player, "You have acces to " + owner + "'s "+ blockName +".");
+        				plugin.sendMessage(player, "You have acces to " + owner + "'s "+ blockName +".");
         			}
         			return;
         		} else if (access == 3) {
+        			plugin.sendMessage(player, "bypassing lock owned by " + owner + ".");
+        			return;
+        		} else if (access == 4) { 
+        			plugin.sendMessage(player, "Public chest.");
+        			return;
+        		} else {
         			if (cmdStatus == 2 && player.hasPermission("securechests.bypass.unlock")) {
-        				plugin.displayMessage(player, "Bypassing and unlocking "+blockName+" owned by "+owner+".");
+        				plugin.sendMessage(player, "Bypassing and unlocking "+blockName+" owned by "+owner+".");
         				lock.unlock();
         				event.setCancelled(true);
         			} else {
-        				plugin.displayMessage(player, "bypassing lock owned by " + owner + ".");
-        			}	
-        			return;
-        			
-        		} else {
-        			plugin.displayMessage(player, "Can not open " + blockName + " owned by " + owner + ".");
-        			event.setCancelled(true);
+        				plugin.sendMessage(player, "Can not open " + blockName + " owned by " + owner + ".");
+        				event.setCancelled(true);
+        			}
         			return;
         		}
         	} else if (cmdStatus == 1) {
         		lock.lock(player.getName());
-        		plugin.displayMessage(player, "Locking " + blockName + ".");
+        		plugin.sendMessage(player, "Locking " + blockName + ".");
         		event.setCancelled(true);
         	} else if (cmdStatus == 6) {
         		lock.lock(otherPlayer);
-        		plugin.displayMessage(player, "Locking " + blockName + " for " + otherPlayer + ".");
+        		plugin.sendMessage(player, "Locking " + blockName + " for " + otherPlayer + ".");
         	}
         }
     }//end onPlayerInteract();

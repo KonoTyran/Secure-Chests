@@ -1,4 +1,7 @@
-package me.HAklowner.SecureChests;
+package me.HAklowner.SecureChests.Listeners;
+
+import me.HAklowner.SecureChests.Lock;
+import me.HAklowner.SecureChests.SecureChests;
 
 import org.bukkit.block.Block;
 import org.bukkit.event.EventHandler;

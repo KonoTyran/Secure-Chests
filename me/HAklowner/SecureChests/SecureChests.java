@@ -2,19 +2,26 @@ package me.HAklowner.SecureChests;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import me.HAklowner.SecureChests.Commands.*;
+import me.HAklowner.SecureChests.Listeners.*;
+import net.sacredlabyrinth.phaed.simpleclans.Clan;
+import net.sacredlabyrinth.phaed.simpleclans.SimpleClans;
+
 import org.bukkit.ChatColor;
-import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.FileConfigurationOptions;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -24,15 +31,27 @@ public class SecureChests extends JavaPlugin {
 	private final SecureChestsPlayerListener playerListener = new SecureChestsPlayerListener(this);
 	private final SecureChestsBlockListener blockListener = new SecureChestsBlockListener(this);
 	private final SecureChestsRedstoneListener redstoneListener = new SecureChestsRedstoneListener(this);
+	private final SecureChestsExplosionListener explosionListener = new SecureChestsExplosionListener(this);
 
 	//Define the logger
 	Logger log = Logger.getLogger("Minecraft");
-	
-	
-	
-	public static final Map<Integer, String> BLOCK_LIST = createMap();
-	
-	private static Map<Integer, String> createMap() {
+
+
+	//simpleClan vars.
+	public SimpleClans simpleClans;
+	public boolean usingSimpleClans;
+
+
+	//block list stuffs
+	public static final Map<Integer, String> BLOCK_LIST = createBlockListMap(); //make block list name
+	public static final Map<Integer, String> BLOCK_PERMS = createBlockPermMap(); //make block perm list
+	public static final Map<Integer, String> BLOCK_CONFIG = createBlockConfigMap(); //make block perm list
+	public Map<Integer, Boolean> blockStatus = new HashMap<Integer, Boolean>();
+	public Map<Integer, Boolean> blockExplosion = new HashMap<Integer, Boolean>();
+
+
+
+	private static Map<Integer, String> createBlockListMap() {
 		Map<Integer, String> result = new HashMap<Integer, String>();
 		result.put(23, "dispenser");
 		result.put(54, "chest");
@@ -40,14 +59,45 @@ public class SecureChests extends JavaPlugin {
 		result.put(62, "furnace");
 		result.put(64, "door");
 		result.put(96, "trapdoor");
-		result.put(107, "fence gate");
+		result.put(107, "gate");
 		result.put(117, "potion stand");
+		result.put(84, "jukebox");
 		return Collections.unmodifiableMap(result);	
 	}
-	
-	public Map<Integer, Boolean> blockStatus = new HashMap<Integer, Boolean>();
+
+	private static Map<Integer, String> createBlockConfigMap() {
+		Map<Integer, String> result = new HashMap<Integer, String>();
+		result.put(23, "Dispenser");
+		result.put(54, "Chest");
+		result.put(61, "Furnace");
+		result.put(62, "Furnace");
+		result.put(64, "Door");
+		result.put(96, "Trapdoor");
+		result.put(107, "Gate");
+		result.put(117, "Potion");
+		result.put(84, "Jukebox");
+		return Collections.unmodifiableMap(result);	
+	}
+
+	private static Map<Integer, String> createBlockPermMap() {
+		Map<Integer, String> result = new HashMap<Integer, String>();
+		result.put(23, "dispenser");
+		result.put(54, "chest");
+		result.put(61, "furnace");
+		result.put(62, "furnace");
+		result.put(64, "door");
+		result.put(96, "trapdoor");
+		result.put(107, "gate");
+		result.put(117, "potionstand");
+		result.put(84, "jukebox");
+		return Collections.unmodifiableMap(result);	
+	}
+
+
 	public Map<Player, Integer> scCmd = new HashMap<Player, Integer>();
 	public Map<Player, String> scAList = new HashMap<Player, String>();	
+	public Map<Player, Clan> scClan = new HashMap<Player, Clan>();
+
 
 	//begin chest storage config commands
 
@@ -98,27 +148,80 @@ public class SecureChests extends JavaPlugin {
 		}
 	}
 	//end player global access list config commands
-	
-	public void displayMessage(Player player, String Message) {
+
+	public void sendMessage(Player player, String Message) {
 		player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]" + ChatColor.WHITE + " " + Message);
 	}
-	
+
+	public void sendMessage(CommandSender sender, String Message) {
+		sender.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]" + ChatColor.WHITE + " " + Message);
+	}
+
 
 	public void displayHelp(Player player) {
-		player.sendMessage(ChatColor.GOLD + "----- Secure Chests " + getDescription().getVersion() + " -----");
+		displayHelp(player, 1);
+	}
+	
+	public void displayHelp(Player player, Integer page) {
+		
+		List<String> helpList = new ArrayList<String>();
+		
 		if (player.hasPermission("securechests.lock")) {
-			player.sendMessage(ChatColor.WHITE + "/sc lock (/lock)" + ChatColor.GRAY + " - lock your chests/furnaces/doors/etc...");
-			player.sendMessage(ChatColor.WHITE + "/sc unlock (/unlock)" + ChatColor.GRAY + " - unlock your chests/furnaces/doors/etc...");
-			player.sendMessage(ChatColor.WHITE + "/sc add username" + ChatColor.GRAY + " - Add a user to container/door access list");
-			player.sendMessage(ChatColor.WHITE + "/sc deny username" + ChatColor.GRAY + " - Add a user to chest container/door list (will override global access list)");
-			player.sendMessage(ChatColor.WHITE + "/sc remove username" + ChatColor.GRAY + " - remove a user from container/door access list");
-			player.sendMessage(ChatColor.WHITE + "/sc gadd username" + ChatColor.GRAY + " - Add a user to your global allow");
-			player.sendMessage(ChatColor.WHITE + "/sc gremove username" + ChatColor.GRAY + " - remove user from global allow list");
-		} else {
-			player.sendMessage(ChatColor.RED + "You dont have access to lock your chests! :(");
+			helpList.add(ChatColor.WHITE + "/sc lock (/lock)" + ChatColor.GRAY + " - lock your chests/furnaces/doors/etc...");
+			helpList.add(ChatColor.WHITE + "/sc unlock (/unlock)" + ChatColor.GRAY + " - unlock your chests/furnaces/doors/etc...");
+			helpList.add(ChatColor.WHITE + "/sc add username" + ChatColor.GRAY + " - Add a user to container/door access list");
+			helpList.add(ChatColor.WHITE + "/sc deny username" + ChatColor.GRAY + " - Add a user to chest container/door list (will override global access list)");
+			helpList.add(ChatColor.WHITE + "/sc remove username" + ChatColor.GRAY + " - remove a user from container/door access list");
+			helpList.add(ChatColor.WHITE + "/sc gadd username" + ChatColor.GRAY + " - Add a user to your global allow");
+			helpList.add(ChatColor.WHITE + "/sc gremove username" + ChatColor.GRAY + " - remove user from global allow list");
 		}
+		
+		if (player.hasPermission("securechests.lock.public")) {
+			helpList.add(ChatColor.WHITE + "/sc public" + ChatColor.GRAY + " - Toggle public status.");
+		}
+		
+		if (player.hasPermission("securechests.bypass.lock")) {
+			helpList.add(ChatColor.WHITE + "/sc lock Name (/lock Name)" + ChatColor.GRAY + " - lock chest for someone else.");
+		}
+		
 		if (player.hasPermission("securechests.reload")) {
-			player.sendMessage(ChatColor.WHITE + "/sc reload" + ChatColor.GRAY + " - reload config files");
+			helpList.add(ChatColor.WHITE + "/sc reload" + ChatColor.GRAY + " - reload config files");
+		}
+		
+		if (helpList.size() == 0 ) {
+			helpList.add("You don't have access to use SecureChests. :( (securechests.lock)");
+		}
+		
+		int totalPageNum = (int) Math.ceil( (double)helpList.size() / (double)7 );
+		
+		page -= 1;
+		
+		if (page > totalPageNum-1 || page <= 0) {
+			page = 0;
+		}
+		
+		player.sendMessage(ChatColor.GOLD + "----- Secure Chests " + getDescription().getVersion() + " - Page " + (page+1) + "/" + totalPageNum + " -----");
+		
+		for (int i = (page * 7); i <= (page * 7) + 6 ;i++) {
+			if (i >= helpList.size())
+				break;
+			player.sendMessage(helpList.get(i));
+		}
+		
+		player.sendMessage(ChatColor.GOLD + "----- use '/sc help #' to get to other pages -----");
+		
+		
+		
+	}
+
+	private void initBlockData() {
+		// Get current active block
+		blockStatus.clear(); // clear the enable/disabled for all block during initialization.
+		for (Integer key : BLOCK_LIST.keySet() ) { //start all blocks disabled then get proper status from config file
+			blockStatus.put(key, false); //default to not allow locking.
+			blockStatus.put(key, this.getConfig().getBoolean("Active." + BLOCK_CONFIG.get(key)));
+			blockExplosion.put(key, true);	//Default to block all explosions.
+			blockExplosion.put(key, this.getConfig().getBoolean("Block_Explosions." + BLOCK_CONFIG.get(key)));
 		}
 	}
 
@@ -127,103 +230,67 @@ public class SecureChests extends JavaPlugin {
 		pm.registerEvents(blockListener, this);
 		pm.registerEvents(playerListener, this);
 		pm.registerEvents(redstoneListener, this);
-		try{     // if config.yml is missing from package, create your own.
-			FileConfiguration config = getConfig();
-			if(!config.contains("Furnace")){
-				config.set("Furnace", true);
-			}
-			if(!config.contains("Door")){
-				config.set("Door", false);
-			}
-			if(!config.contains("Chest")){
-				config.set("Chest", true);
-			}    
-			if(!config.contains("Dispenser")){
-				config.set("Dispenser", false);
-			}  
-			if(!config.contains("Trapdoor")){
-				config.set("Trapdoor", false);
-			}  
-			if(!config.contains("Potion")){
-				config.set("Potion", true);
-			}  
-			if(!config.contains("Gate")){
-				config.set("Gate", true);
-			}  
-			saveConfig();
-		}catch(Exception e1){
-			e1.printStackTrace();
-		} // END TRY    
+		pm.registerEvents(explosionListener, this);
+
 		// load / create config
 		FileConfiguration cfg = getConfig();
 		FileConfigurationOptions cfgOptions = cfg.options();
-		cfgOptions.copyDefaults(true);
-		cfgOptions.copyHeader(true);
+		cfgOptions.copyDefaults(true).copyHeader(true);
 		saveConfig();      
-		
-		blockStatus.clear(); // clear the enable/disabled for all block during initialization.
-		// Get current active block
-		for (Integer key : BLOCK_LIST.keySet() ) { //Start with all block default to disabled.
-			blockStatus.put(key, false);
+
+
+		initBlockData(); //call this to get on/off status of lockable blocks.
+
+		registerCommands();
+
+		Plugin plug = getServer().getPluginManager().getPlugin("SimpleClans");
+
+		if (plug != null)
+		{
+			simpleClans = ((SimpleClans) plug);
+			usingSimpleClans = true;
+			log.info("[" + getDescription().getName() + "] SimpleClans found.");    
 		}
-		
-		if(getConfig().getBoolean("Chest"))
-			blockStatus.put(54, true);
-		if(getConfig().getBoolean("Furnace")) {
-			blockStatus.put(61, true);
-			blockStatus.put(62, true);
-		}
-		if(getConfig().getBoolean("Door"))
-			blockStatus.put(64, true);
-		if(getConfig().getBoolean("Dispenser"))
-			blockStatus.put(23, true);
-		if(getConfig().getBoolean("Trapdoor"))
-			blockStatus.put(96, true);
-		if(getConfig().getBoolean("Gate"))
-			blockStatus.put(107, true);
-		if(getConfig().getBoolean("Potion"))
-			blockStatus.put(117, true);
-		
+
+		metrics();
 		// log initilization and continue
 		log.info("[" + getDescription().getName() + "] " + getDescription().getVersion() + " enabled.");    
+
+
 	}
-	
-	private void reloadPlugin() {
-    	reloadAListConfig();
-    	reloadStorageConfig();
-    	reloadConfig();
-		blockStatus.clear(); // clear the enable/disabled for all block during initialization.
-		// Get current active block
-		for (Integer key : BLOCK_LIST.keySet() ) { //Start with all block default to disabled.
-			blockStatus.put(key, false);
-		}
-		
-		if(getConfig().getBoolean("Chest"))
-			blockStatus.put(54, true);
-		if(getConfig().getBoolean("Furnace")) {
-			blockStatus.put(61, true);
-			blockStatus.put(62, true);
-		}
-		if(getConfig().getBoolean("Door"))
-			blockStatus.put(64, true);
-		if(getConfig().getBoolean("Dispenser"))
-			blockStatus.put(23, true);
-		if(getConfig().getBoolean("Trapdoor"))
-			blockStatus.put(96, true);
-		if(getConfig().getBoolean("Gate"))
-			blockStatus.put(107, true);
-		if(getConfig().getBoolean("Potion"))
-			blockStatus.put(117, true);
-    	log.info("[" + getDescription().getName() + "] Reload complete");
+
+	private void registerCommands() {
+		getCommand("lock").setExecutor(new LockCommand(this));
+		getCommand("unlock").setExecutor(new UnLockCommand(this));
+		getCommand("sc").setExecutor(new SCCommand(this));
+		getCommand("securechest").setExecutor(new SCCommand(this));
+		getCommand("securechests").setExecutor(new SCCommand(this));
 	}
-	
+
+	private void metrics() {
+		try {
+			MetricsSC metrics = new MetricsSC(this);
+			metrics.start();
+		} catch (IOException e) {
+			log.severe("Problems submitting plugin stats");
+		}
+	}
+
+	public void reloadPlugin() {
+		reloadAListConfig();
+		reloadStorageConfig();
+		reloadConfig();
+		initBlockData();
+		log.info("[" + getDescription().getName() + "] Reload complete");
+	}
+
 	public void onDisable() {
 		//saveStorageConfig();
 		//saveAListConfig();
 		//saveConfig();
 		log.info("[" + getDescription().getName() + "] " + getDescription().getVersion() + " Disabled."); 
 	}
-	
+
 	// will return :
 	// 1. exact name if online
 	// 2. partial name if online
@@ -242,159 +309,5 @@ public class SecureChests extends JavaPlugin {
 			pName = caddPlayer.getName();
 		}
 		return pName;
-	}
-	
-	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-		Player player = null;
-		if (sender instanceof Player) {
-			player = (Player) sender;
-		}
-
-		if (cmd.getName().equalsIgnoreCase("lock")){ // If the player typed /basic then do the following...
-			if (player == null) {
-				sender.sendMessage("this command can only be run by a player.");
-			} else {
-				if(args.length == 1) {
-					if (sender.hasPermission("securechests.bypass.lock")) {
-						String pName = myGetPlayerName(args[0]);
-						displayMessage(player, "Now interact with a container/door to lock it for "+pName+".");
-						scAList.put(player, pName);
-						scCmd.put(player, 6);
-					} else {
-						displayMessage(player, "You dont have permission to lock other's Blocks!");
-					}
-				} else if (args.length == 0 && sender.hasPermission("securechests.lock")) {
-					displayMessage(player, "Now interact with a container/door to lock it.");
-					scCmd.put(player, 1);
-				} else {
-					displayMessage(player, "You dont have permission to lock this!");
-				}
-			}
-			return true;
-		} else if (cmd.getName().equalsIgnoreCase("unlock")) {
-				if (player == null) {
-					displayMessage(player, "this command can only be run by a player.");
-				} else {
-					if (sender.hasPermission("securechests.lock")) {
-						displayMessage(player, "Now interact with a container/door to unlock it.");
-						scCmd.put(player, 2);
-					} else {
-						displayMessage(player, "You dont have permission to lock your Blocks!");
-					}
-				}
-		} else if (cmd.getName().equalsIgnoreCase("sc") || cmd.getName().equalsIgnoreCase("securechests") || cmd.getName().equalsIgnoreCase("securechest")) {
-			if (player == null) {
-				if(args[0].equalsIgnoreCase("reload") ) {
-					reloadPlugin();
-				} else {
-					displayMessage(player, "this command can only be run by a player.");
-				}
-			} else {
-				if(args.length == 0 || args[0].equalsIgnoreCase("help") || args[0].equalsIgnoreCase("?")) { //get help menu
-					displayHelp(player);
-				} else if (args[0].equalsIgnoreCase("lock") && args.length == 1) { // Code to activate locking mode.
-					if (sender.hasPermission("securechests.lock")) {
-						displayMessage(player, "Now interact with a container/door to lock it.");
-						scCmd.put(player, 1);
-					} else {
-						displayMessage(player, "You dont have permission to lock your chests.");
-					}
-				} else if(args[0].equalsIgnoreCase("lock") && args.length == 2) {
-					if (sender.hasPermission("securechests.bypass.lock")) {
-						String pName = myGetPlayerName(args[1]);
-						displayMessage(player, "Now interact with a container/door to lock it for " + pName);
-						scAList.put(player, pName);
-						scCmd.put(player, 6);				 
-					} else {					
-						displayMessage(player, "You dont have permission to lock other's Blocks!");
-					}
-	        } else if (args[0].equalsIgnoreCase("unlock")) { // UNLOCK!
-	        	if (sender.hasPermission("securechests.lock")) {
-	        		displayMessage(player, "Now interact with a container/door to unlock it.");
-	        		scCmd.put(player, 2);
-        		} else {
-	        		displayMessage(player, "You dont have permission to lock your Blocks!");
-        		}
-	        } else if (args[0].equalsIgnoreCase("add")) {  //Add player to chest access list.
-	        	if (sender.hasPermission("securechests.lock")) {
-	        		if (args.length != 2) {
-	        			displayMessage(player, "Correct command useage: /sc add username");
-	        		} else {
-	        			String pName = myGetPlayerName(args[1]);
-	        			displayMessage(player, "will add user " + pName + " to the next owned block you interact with.");
-	        			scAList.put(player , pName);
-	        			scCmd.put(player, 3);
-	        		}
-	        	} 
-	        } else if (args[0].equalsIgnoreCase("remove")) { // Remove player from chest access list
-	        	if (sender.hasPermission("securechests.lock")) {
-	        		if (args.length != 2) {
-	        			displayMessage(player, "Correct command useage: /sc remove username");
-	        		} else {
-	        			String pName = myGetPlayerName(args[1]);
-	        			displayMessage(player, "will remove user " + pName + " from the next owned block you interact with.");
-	        			scAList.put(player , pName);
-	        			scCmd.put(player, 4);
-	        		}
-	        	} else {
-	        		displayMessage(player, "You dont have permission.");
-	        	}
-	        } else if (args[0].equalsIgnoreCase("deny")) { // Remove player from chest access list
-	        	if (sender.hasPermission("securechests.lock")) {
-	        		if (args.length != 2) {
-	        			displayMessage(player, "Correct command useage: /sc deny username");
-	        		} else {
-	        			String pName = myGetPlayerName(args[1]);
-	        			displayMessage(player, "will add user " + pName + " to the deny list of the next owned block you interact with.");
-	        			scAList.put(player , pName);
-	        			scCmd.put(player, 5);
-	        		}
-	        	} else {
-	        		displayMessage(player, "You dont have permission.");
-	        	}
-	        } else if (args[0].equalsIgnoreCase("gadd")) { //Add to global access list!
-	        	if (sender.hasPermission("securechests.lock")) {
-	        		if (args.length != 2) {
-	        			displayMessage(player, "Correct command useage: /sc gadd username");
-	        		} else {
-	        			String pName = myGetPlayerName(args[1]);
-
-	        			if (!getAListConfig().getBoolean(sender.getName()+"." + pName)){
-	        				displayMessage(player, "Adding " + pName + " to your global allow list.");
-	        				getAListConfig().set(sender.getName()+"." + pName, true);
-	        				saveAListConfig();
-	        			} else {
-	        				displayMessage(player, "Player "+pName+" already in access list.");
-	        			}
-	        		}
-	        	} else {
-	        		displayMessage(player, "You dont have permission");
-	        	}
-	        } else if (args[0].equalsIgnoreCase("gremove")) { //Add to global access list!
-	        	if (sender.hasPermission("securechests.lock")) {
-	        		if (args.length != 2) {
-	        			displayMessage(player, "Correct command useage: /sc gremove username");
-	        		} else {
-	        			String pName = myGetPlayerName(args[1]);
-	        			if (!getAListConfig().getBoolean(sender.getName()+"." + pName)){
-	        				displayMessage(player, "Player " + pName + " Not on your global access list");
-	        			} else {
-	        				getAListConfig().set(sender.getName()+"." + pName, null);
-	        				saveAListConfig();
-	        				displayMessage(player, "Player "+pName+" Removed from your global access list.");
-	        			}
-	        		}
-	        	} else {
-	        		displayMessage(player, "You dont have permission");
-	        	}
-	        } else if (args[0].equalsIgnoreCase("reload") && player.hasPermission("securechests.reload")) {
-	        	reloadPlugin();
-	        	displayMessage(player, "Config Reloaded.");
-	        } else {
-	        	displayMessage(player, "Unknown command. type \"/sc help\" for command list.");
-	        }
-			}//End command checks!
-		}
-		return false;
 	}
 }
