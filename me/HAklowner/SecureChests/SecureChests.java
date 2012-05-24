@@ -10,10 +10,10 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import me.HAklonwer.SecureChests.Utils.*;
 import me.HAklowner.SecureChests.Commands.*;
 import me.HAklowner.SecureChests.Listeners.*;
 import me.HAklowner.SecureChests.Managers.LockManager;
+import me.HAklowner.SecureChests.Utils.*;
 import net.sacredlabyrinth.phaed.simpleclans.Clan;
 import net.sacredlabyrinth.phaed.simpleclans.SimpleClans;
 

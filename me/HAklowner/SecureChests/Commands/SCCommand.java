@@ -3,8 +3,8 @@ package me.HAklowner.SecureChests.Commands;
 import java.util.ArrayList;
 import java.util.List;
 
-import me.HAklonwer.SecureChests.Utils.GhostPurge;
 import me.HAklowner.SecureChests.SecureChests;
+import me.HAklowner.SecureChests.Utils.GhostPurge;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
