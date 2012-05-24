@@ -23,8 +23,8 @@ public class SecureChestsRedstoneListener implements Listener {
 		if (b.getTypeId() != 64)
 			return; //redstone event is not a door stop now.
 
-		Lock lock = new Lock(plugin);
-		lock.setLocation(b.getLocation());
+		Lock lock = plugin.getLockManager().getLock(b.getLocation());
+		//lock.setLocation(b.getLocation());
 		if(lock.isLocked()) 
 			event.setNewCurrent(event.getOldCurrent()); //change the "current" back to what it was originally. meaning no change.
 	}

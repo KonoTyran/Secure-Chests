@@ -14,8 +14,8 @@ public class DenyCommand {
 
 	private final SecureChests plugin;
 
-	public DenyCommand(SecureChests instance) {
-		plugin = instance;
+	public DenyCommand() {
+		plugin = SecureChests.getInstance();
 	}
 
 
@@ -44,7 +44,7 @@ public class DenyCommand {
 
 		if (sender.hasPermission("securechests.lock")) {
 			if (args.length != 1) {
-				plugin.sendMessage(player, "Correct command useage: /sc deny username");
+				plugin.sendMessage(player, "Correct command usage: /sc deny username");
 				return true;
 			} else {
 				if (args[0].toLowerCase().startsWith("c:") && plugin.usingSimpleClans) { //they want to add a clan not a player
@@ -60,7 +60,7 @@ public class DenyCommand {
 						plugin.sendMessage(player, "Clan not found.");
 						return true;
 					}
-				} else if (args[1].toLowerCase().startsWith("c:") && !plugin.usingSimpleClans) {
+				} else if (args[0].toLowerCase().startsWith("c:") && !plugin.usingSimpleClans) {
 					plugin.sendMessage(player, "Server not using Simple Clans, unable to add clan to access list.");
 					return true;
 				} else {
@@ -72,7 +72,7 @@ public class DenyCommand {
 				}
 			}
 		} else {
-			plugin.sendMessage(player, "You dont have permission to use SecureChests. (securechests.lock)");
+			plugin.sendMessage(player, "You don't have permission to use SecureChests. (securechests.lock)");
 			return true;
 		}
 	}

@@ -11,8 +11,8 @@ public class LockCommand implements CommandExecutor {
 
 	private final SecureChests plugin;
 	
-	public LockCommand(SecureChests instance) {
-		plugin = instance;
+	public LockCommand() {
+		plugin = SecureChests.getInstance();
 	}
 	
 	
@@ -51,7 +51,7 @@ public class LockCommand implements CommandExecutor {
 			plugin.scCmd.put(player, 1);
 			return true;
 		} else {
-			plugin.sendMessage(player, "You dont have permission to use SecureChests. (securechests.lock)");
+			plugin.sendMessage(player, "You don't have permission to use SecureChests. (securechests.lock)");
 		}
 		
 		return false;

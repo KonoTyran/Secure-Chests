@@ -3,6 +3,7 @@ package me.HAklowner.SecureChests.Commands;
 import java.util.ArrayList;
 import java.util.List;
 
+import me.HAklonwer.SecureChests.Utils.GhostPurge;
 import me.HAklowner.SecureChests.SecureChests;
 
 import org.bukkit.command.Command;
@@ -15,8 +16,8 @@ public class SCCommand implements CommandExecutor {
 
 	private final SecureChests plugin;
 
-	public SCCommand(SecureChests instance) {
-		plugin = instance;
+	public SCCommand() {
+		plugin = SecureChests.getInstance();
 	}
 
 
@@ -49,12 +50,24 @@ public class SCCommand implements CommandExecutor {
 			player = (Player) sender;
 		} else {
 			//console commands
+			
+			if(args.length == 0 || args[0].equalsIgnoreCase("help") || args[0].equalsIgnoreCase("?")) {
+				plugin.sendMessage(sender, "==SecureChests help menu==");
+				plugin.sendMessage(sender, "sc reload - reload config");
+				plugin.sendMessage(sender, "sc upgrade  - upgrades your flatfile to the sql database ###WARNING THIS WILL LAG THE SERVER####");
+				return true;
+			}
+			
 			if(args[0].equalsIgnoreCase("reload")) {
 				plugin.reloadPlugin();
 				plugin.sendMessage(sender, "Config's reloaded.");
-			} else {
-				plugin.sendMessage(sender, "This Command can only be used by a player");
+				return true;
+			} else if (args[0].equalsIgnoreCase("upgrade")) {
+				plugin.getLockManager().updateFromFlatFile();
+				return true;
 			}
+				
+			plugin.sendMessage(sender, "This Command can only be used by a player");
 			return true;
 		}
 
@@ -88,55 +101,80 @@ public class SCCommand implements CommandExecutor {
 
 		//reload plugin's config files
 		if (args[0].equalsIgnoreCase("reload")) {
-			if (sender.hasPermission("securechests.reload")) {
+			if (sender.hasPermission("securechests.admin.reload")) {
 				plugin.reloadPlugin();
 				plugin.sendMessage(player, "Config's reloaded.");
 				return true;
 			} else {
-				plugin.sendMessage(player, "You don't have permission to reload SecureChests. (securechests.reload)");
+				plugin.sendMessage(player, "You don't have permission to reload SecureChests. (securechests.admin.reload)");
+				return true;
+			}
+		}
+		
+		
+		if (args[0].equalsIgnoreCase("purge")) {
+			if (sender.hasPermission("securechests.admin.purge")) {
+				GhostPurge gp = new GhostPurge();
+				gp.purge(player);
+				return true;
+			} else {
+				plugin.sendMessage(player, "You don't have permission to do that. (securechests.admin.purge)");
+				return true;
+			}
+		}
+		
+		if (args.length == 2 && args[0].equalsIgnoreCase("newowner")) {
+			if (sender.hasPermission("securechests.bypass.changeowner")) {
+				String pName = plugin.myGetPlayerName(args[1]);
+				plugin.sendMessage(player, "Now click on a chest to change ownership to "+ pName);
+				plugin.scAList.put(player, pName);
+				plugin.scCmd.put(player, 10);
+				return true;
+			} else {
+				plugin.sendMessage(player, "You don't have permission to do that. (securechests.admin.changeowner)");
 				return true;
 			}
 		}
 
 		//send to /lock command
 		if (args[0].equalsIgnoreCase("lock")) {
-			LockCommand cmd = new LockCommand(plugin);
+			LockCommand cmd = new LockCommand();
 			return cmd.onCommand(sender, command, label, stripFirst(args));
 		}
 
 		//send to /unlock command
 		if (args[0].equalsIgnoreCase("unlock")) {
-			UnLockCommand cmd = new UnLockCommand(plugin);
+			UnLockCommand cmd = new UnLockCommand();
 			return cmd.onCommand(sender, command, label, stripFirst(args));
 		}
 
 		//send to "add" command manager
 		if (args[0].equalsIgnoreCase("add")) {
-			AddCommand cmd = new AddCommand(plugin);
+			AddCommand cmd = new AddCommand();
 			return cmd.onCommand(sender, command, label, stripFirst(args));
 		}
 
 		//send to "Remove" command manager
 		if (args[0].equalsIgnoreCase("remove")) {
-			RemoveCommand cmd = new RemoveCommand(plugin);
+			RemoveCommand cmd = new RemoveCommand();
 			return cmd.onCommand(sender, command, label, stripFirst(args));
 		}
 
 		//send to "Deny" command manager
 		if (args[0].equalsIgnoreCase("deny")) {
-			DenyCommand cmd = new DenyCommand(plugin);
+			DenyCommand cmd = new DenyCommand();
 			return cmd.onCommand(sender, command, label, stripFirst(args));
 		}
 
 		//send to "Gadd" command manager
 		if (args[0].equalsIgnoreCase("gadd")) {
-			GaddCommand cmd = new GaddCommand(plugin);
+			GaddCommand cmd = new GaddCommand();
 			return cmd.onCommand(sender, command, label, stripFirst(args));
 		}
 
 		//send to "Gremove" command manager
 		if (args[0].equalsIgnoreCase("gremove")) {
-			GremoveCommand cmd = new GremoveCommand(plugin);
+			GremoveCommand cmd = new GremoveCommand();
 			return cmd.onCommand(sender, command, label, stripFirst(args));
 		}
 

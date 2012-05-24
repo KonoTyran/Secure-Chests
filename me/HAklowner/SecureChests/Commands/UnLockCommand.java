@@ -11,8 +11,8 @@ public class UnLockCommand implements CommandExecutor {
 
 	private final SecureChests plugin;
 	
-	public UnLockCommand(SecureChests instance) {
-		plugin = instance;
+	public UnLockCommand() {
+		plugin = SecureChests.getInstance();
 	}
 	
 	// command status:
@@ -43,7 +43,7 @@ public class UnLockCommand implements CommandExecutor {
 			plugin.scCmd.put(player, 2);
 			return true;
 		} else {
-			plugin.sendMessage(player, "You dont have permission to use SecureChests. (securechests.lock)");
+			plugin.sendMessage(player, "You don't have permission to use SecureChests. (securechests.lock)");
 		}
 		return false;
 	}

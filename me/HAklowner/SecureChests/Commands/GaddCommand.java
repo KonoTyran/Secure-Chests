@@ -14,8 +14,8 @@ public class GaddCommand {
 
 	private final SecureChests plugin;
 
-	public GaddCommand(SecureChests instance) {
-		plugin = instance;
+	public GaddCommand() {
+		plugin = SecureChests.getInstance();
 	}
 
 
@@ -53,20 +53,18 @@ public class GaddCommand {
 					if (cm.isClan(clanTag)) {
 						Clan clan = cm.getClan(clanTag);
 						plugin.sendMessage(player, "adding clan " + clan.getTagLabel() + ChatColor.WHITE + " to your global allow list.");
-						plugin.getAListConfig().set(sender.getName()+".clans." + clan.getTag().toLowerCase(), true);
-						plugin.saveAListConfig();
+						plugin.getLockManager().addToGlobalList(player.getName(), clanTag, "clan");
 					} else {
 						plugin.sendMessage(player, "Clan not found.");
 					}
 				} else if (args[0].toLowerCase().startsWith("c:") && !plugin.usingSimpleClans) {
 					plugin.sendMessage(player, "Server not using Simple Clans, unable to add clan to access list.");
 				} else {
-					String pName = plugin.myGetPlayerName(args[1]);
+					String pName = plugin.myGetPlayerName(args[0]);
 
-					if (!plugin.getAListConfig().getBoolean(sender.getName()+"." + pName)){
+					if (!plugin.getLockManager().playerOnGlobalList(player.getName(), pName)){
 						plugin.sendMessage(player, "Adding " + pName + " to your global allow list.");
-						plugin.getAListConfig().set(sender.getName()+".players." + pName, true);
-						plugin.saveAListConfig();
+						plugin.getLockManager().addToGlobalList(player.getName(), pName, "player");
 					} else {
 						plugin.sendMessage(player, "Player "+pName+" already in access list.");
 					}

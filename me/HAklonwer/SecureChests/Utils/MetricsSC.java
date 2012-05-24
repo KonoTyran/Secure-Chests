@@ -1,4 +1,4 @@
-package me.HAklowner.SecureChests;
+package me.HAklonwer.SecureChests.Utils;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.InvalidConfigurationException;

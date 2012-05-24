@@ -14,8 +14,8 @@ public class AddCommand {
 
 	private final SecureChests plugin;
 
-	public AddCommand(SecureChests instance) {
-		plugin = instance;
+	public AddCommand() {
+		plugin = SecureChests.getInstance();
 	}
 
 
@@ -44,7 +44,7 @@ public class AddCommand {
 
 		if (sender.hasPermission("securechests.lock")) {
 			if (args.length != 1) {
-				plugin.sendMessage(player, "Correct command useage: " + ChatColor.GRAY + "/sc add username" + ChatColor.WHITE + " or " + ChatColor.GRAY + "/sc add c:clantag");
+				plugin.sendMessage(player, "Correct command usage: " + ChatColor.GRAY + "/sc add username" + ChatColor.WHITE + " or " + ChatColor.GRAY + "/sc add c:clantag");
 			} else {
 				if (args[0].toLowerCase().startsWith("c:") && plugin.usingSimpleClans) { //they want to add a clan not a player
 					String clanTag = args[0].substring(2);
@@ -67,7 +67,7 @@ public class AddCommand {
 				}
 			}
 		} else {
-			plugin.sendMessage(player, "You dont have permission to use SecureChests. (securechests.lock)");
+			plugin.sendMessage(player, "You don't have permission to use SecureChests. (securechests.lock)");
 		}
 		return false;
 	} 

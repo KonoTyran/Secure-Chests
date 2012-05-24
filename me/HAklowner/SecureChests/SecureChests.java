@@ -1,7 +1,7 @@
 package me.HAklowner.SecureChests;
 
-import java.io.File;
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -10,8 +10,10 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import me.HAklonwer.SecureChests.Utils.*;
 import me.HAklowner.SecureChests.Commands.*;
 import me.HAklowner.SecureChests.Listeners.*;
+import me.HAklowner.SecureChests.Managers.LockManager;
 import net.sacredlabyrinth.phaed.simpleclans.Clan;
 import net.sacredlabyrinth.phaed.simpleclans.SimpleClans;
 
@@ -19,13 +21,14 @@ import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.FileConfigurationOptions;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class SecureChests extends JavaPlugin {
+
+	private static SecureChests instance;
 
 	//ClassListeners
 	private final SecureChestsPlayerListener playerListener = new SecureChestsPlayerListener(this);
@@ -34,7 +37,7 @@ public class SecureChests extends JavaPlugin {
 	private final SecureChestsExplosionListener explosionListener = new SecureChestsExplosionListener(this);
 
 	//Define the logger
-	Logger log = Logger.getLogger("Minecraft");
+	static Logger logger = Logger.getLogger("SecureChests");
 
 
 	//simpleClan vars.
@@ -49,7 +52,8 @@ public class SecureChests extends JavaPlugin {
 	public Map<Integer, Boolean> blockStatus = new HashMap<Integer, Boolean>();
 	public Map<Integer, Boolean> blockExplosion = new HashMap<Integer, Boolean>();
 
-
+	//managers
+	private LockManager LockManager;
 
 	private static Map<Integer, String> createBlockListMap() {
 		Map<Integer, String> result = new HashMap<Integer, String>();
@@ -99,7 +103,7 @@ public class SecureChests extends JavaPlugin {
 	public Map<Player, Clan> scClan = new HashMap<Player, Clan>();
 
 
-	//begin chest storage config commands
+	/*/begin chest storage config commands
 
 	private FileConfiguration storage = null;
 	private File storageConfFile = new File("plugins/SecureChests/", "storage.yml");
@@ -110,15 +114,16 @@ public class SecureChests extends JavaPlugin {
 		}
 		return storage;
 	}
-
+	
 	public void reloadStorageConfig() {
 		storage = YamlConfiguration.loadConfiguration(storageConfFile);
 	}
+	
 	public void saveStorageConfig() {
 		try {
 			storage.save(storageConfFile);
 		} catch(IOException ex) {
-			Logger.getLogger(JavaPlugin.class.getName()).log(Level.SEVERE, "Could not save config to " + storageConfFile, ex);
+			logger.log(Level.SEVERE, "Could not save config to " + storageConfFile, ex);
 		}
 	}
 
@@ -144,10 +149,27 @@ public class SecureChests extends JavaPlugin {
 		try {
 			aList.save(aListConfFile);
 		} catch(IOException ex) {
-			Logger.getLogger(JavaPlugin.class.getName()).log(Level.SEVERE, "Could not save config to " + aListConfFile, ex);
+			logger.log(Level.SEVERE, "Could not save config to " + aListConfFile, ex);
+		}
+	}//end player global access list config commands
+	*/
+	
+	public static Logger getLog() {
+		return logger;
+	}
+
+	public static SecureChests getInstance() {
+		return instance;
+	}
+
+	public static void log(String msg, Object... arg) {
+		if (arg == null || arg.length == 0) {
+			logger.log(Level.INFO, msg);
+		} else {
+			logger.log(Level.INFO, new StringBuilder().append(MessageFormat.format(msg, arg)).toString());
 		}
 	}
-	//end player global access list config commands
+
 
 	public void sendMessage(Player player, String Message) {
 		player.sendMessage(ChatColor.DARK_BLUE + "[Secure Chests]" + ChatColor.WHITE + " " + Message);
@@ -161,11 +183,11 @@ public class SecureChests extends JavaPlugin {
 	public void displayHelp(Player player) {
 		displayHelp(player, 1);
 	}
-	
+
 	public void displayHelp(Player player, Integer page) {
-		
+
 		List<String> helpList = new ArrayList<String>();
-		
+
 		if (player.hasPermission("securechests.lock")) {
 			helpList.add(ChatColor.WHITE + "/sc lock (/lock)" + ChatColor.GRAY + " - lock your chests/furnaces/doors/etc...");
 			helpList.add(ChatColor.WHITE + "/sc unlock (/unlock)" + ChatColor.GRAY + " - unlock your chests/furnaces/doors/etc...");
@@ -175,43 +197,51 @@ public class SecureChests extends JavaPlugin {
 			helpList.add(ChatColor.WHITE + "/sc gadd username" + ChatColor.GRAY + " - Add a user to your global allow");
 			helpList.add(ChatColor.WHITE + "/sc gremove username" + ChatColor.GRAY + " - remove user from global allow list");
 		}
-		
+
 		if (player.hasPermission("securechests.lock.public")) {
 			helpList.add(ChatColor.WHITE + "/sc public" + ChatColor.GRAY + " - Toggle public status.");
 		}
-		
+
 		if (player.hasPermission("securechests.bypass.lock")) {
 			helpList.add(ChatColor.WHITE + "/sc lock Name (/lock Name)" + ChatColor.GRAY + " - lock chest for someone else.");
 		}
 		
-		if (player.hasPermission("securechests.reload")) {
+		if (player.hasPermission("securechests.bypass.chagneowner")) {
+			helpList.add(ChatColor.WHITE + "/sc newowner username" + ChatColor.GRAY + " - changes locks ownership to \"username\" ");
+		}
+
+		if (player.hasPermission("securechests.admin.reload")) {
 			helpList.add(ChatColor.WHITE + "/sc reload" + ChatColor.GRAY + " - reload config files");
 		}
 		
+		if (player.hasPermission("securechests.admin.purge")) {
+			helpList.add(ChatColor.WHITE + "/sc purge" + ChatColor.GRAY + " - purge ghost locks from database");
+		}
+
 		if (helpList.size() == 0 ) {
 			helpList.add("You don't have access to use SecureChests. :( (securechests.lock)");
 		}
-		
+
 		int totalPageNum = (int) Math.ceil( (double)helpList.size() / (double)7 );
-		
+
 		page -= 1;
-		
+
 		if (page > totalPageNum-1 || page <= 0) {
 			page = 0;
 		}
-		
+
 		player.sendMessage(ChatColor.GOLD + "----- Secure Chests " + getDescription().getVersion() + " - Page " + (page+1) + "/" + totalPageNum + " -----");
-		
+
 		for (int i = (page * 7); i <= (page * 7) + 6 ;i++) {
 			if (i >= helpList.size())
 				break;
 			player.sendMessage(helpList.get(i));
 		}
-		
+
 		player.sendMessage(ChatColor.GOLD + "----- use '/sc help #' to get to other pages -----");
-		
-		
-		
+
+
+
 	}
 
 	private void initBlockData() {
@@ -226,6 +256,7 @@ public class SecureChests extends JavaPlugin {
 	}
 
 	public void onEnable() {
+		instance = this;
 		PluginManager pm = this.getServer().getPluginManager();
 		pm.registerEvents(blockListener, this);
 		pm.registerEvents(playerListener, this);
@@ -243,28 +274,41 @@ public class SecureChests extends JavaPlugin {
 
 		registerCommands();
 
-		Plugin plug = getServer().getPluginManager().getPlugin("SimpleClans");
+		Plugin plug = pm.getPlugin("SimpleClans");
 
 		if (plug != null)
 		{
 			simpleClans = ((SimpleClans) plug);
 			usingSimpleClans = true;
-			log.info("[" + getDescription().getName() + "] SimpleClans found.");    
+			logger.info("[" + getDescription().getName() + "] SimpleClans found.");    
 		}
 
 		metrics();
-		// log initilization and continue
-		log.info("[" + getDescription().getName() + "] " + getDescription().getVersion() + " enabled.");    
+
+		//if (getConfig().getBoolean("ghost_purge_on_startup")) {
+		//	GhostPurge gp = new GhostPurge();
+		//	gp.purge(true);
+		//}
+
+		LockManager = new LockManager();
+		
+		
+		logger.info("[" + getDescription().getName() + "] " + getDescription().getVersion() + " enabled.");    
 
 
 	}
+	
+	public LockManager getLockManager() {
+		return LockManager;
+	}
+	
 
 	private void registerCommands() {
-		getCommand("lock").setExecutor(new LockCommand(this));
-		getCommand("unlock").setExecutor(new UnLockCommand(this));
-		getCommand("sc").setExecutor(new SCCommand(this));
-		getCommand("securechest").setExecutor(new SCCommand(this));
-		getCommand("securechests").setExecutor(new SCCommand(this));
+		getCommand("lock").setExecutor(new LockCommand());
+		getCommand("unlock").setExecutor(new UnLockCommand());
+		getCommand("sc").setExecutor(new SCCommand());
+		getCommand("securechest").setExecutor(new SCCommand());
+		getCommand("securechests").setExecutor(new SCCommand());
 	}
 
 	private void metrics() {
@@ -272,23 +316,19 @@ public class SecureChests extends JavaPlugin {
 			MetricsSC metrics = new MetricsSC(this);
 			metrics.start();
 		} catch (IOException e) {
-			log.severe("Problems submitting plugin stats");
+			logger.severe("Problems submitting plugin stats");
 		}
 	}
 
 	public void reloadPlugin() {
-		reloadAListConfig();
-		reloadStorageConfig();
 		reloadConfig();
 		initBlockData();
-		log.info("[" + getDescription().getName() + "] Reload complete");
+		logger.info("[" + getDescription().getName() + "] Reload complete");
 	}
 
 	public void onDisable() {
-		//saveStorageConfig();
-		//saveAListConfig();
-		//saveConfig();
-		log.info("[" + getDescription().getName() + "] " + getDescription().getVersion() + " Disabled."); 
+		getLockManager().closeConnection();
+		logger.info("[" + getDescription().getName() + "] " + getDescription().getVersion() + " Disabled."); 
 	}
 
 	// will return :

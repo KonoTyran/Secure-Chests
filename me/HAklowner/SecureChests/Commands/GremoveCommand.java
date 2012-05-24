@@ -14,8 +14,8 @@ public class GremoveCommand {
 
 	private final SecureChests plugin;
 
-	public GremoveCommand(SecureChests instance) {
-		plugin = instance;
+	public GremoveCommand() {
+		plugin = SecureChests.getInstance();
 	}
 
 
@@ -44,7 +44,7 @@ public class GremoveCommand {
 		
 	if (sender.hasPermission("securechests.lock")) {
 		if (args.length != 1) {
-			plugin.sendMessage(player, "Correct command useage: /sc gremove username");
+			plugin.sendMessage(player, "Correct command usage: /sc gremove username");
 		} else {
 			if (args[0].toLowerCase().startsWith("c:") && plugin.usingSimpleClans) { //they want to add a clan not a player
 				String clanTag = args[0].substring(2);
@@ -52,14 +52,12 @@ public class GremoveCommand {
 				if (cm.isClan(clanTag)) {
 					Clan clan = cm.getClan(clanTag);
 					plugin.sendMessage(player, "removing clan " + clan.getTagLabel() + ChatColor.WHITE + " from your global allow list.");
-					plugin.getAListConfig().set(sender.getName()+".clans." + clan.getTag().toLowerCase(), null);
-					plugin.saveAListConfig();
+					plugin.getLockManager().addToGlobalList(player.getName(), clanTag, "clan");
 				} else {
-					if (!plugin.getAListConfig().getBoolean(sender.getName()+".clans." + clanTag)){
+					if (!plugin.getLockManager().clanOnGlobalList(player.getName(), clanTag)){
 						plugin.sendMessage(player, "clan " + clanTag + " Not on your global access list");
 					} else {
-						plugin.getAListConfig().set(sender.getName()+".clans." + clanTag, null);
-						plugin.saveAListConfig();
+						plugin.getLockManager().removeFromGlobalList(player.getName(), clanTag, "clan");
 						plugin.sendMessage(player, "clan "+clanTag+" Removed from your global access list.");
 					}
 				}
@@ -67,17 +65,16 @@ public class GremoveCommand {
 				plugin.sendMessage(player, "Server not using Simple Clans, unable to add clan to access list.");
 			} else {
 				String pName = plugin.myGetPlayerName(args[0]);
-				if (!plugin.getAListConfig().getBoolean(sender.getName()+".players." + pName)){
+				if (!plugin.getLockManager().playerOnGlobalList(player.getName(), pName)){
 					plugin.sendMessage(player, "Player " + pName + " Not on your global access list");
 				} else {
-					plugin.getAListConfig().set(sender.getName()+".players." + pName, null);
-					plugin.saveAListConfig();
+					plugin.getLockManager().removeFromGlobalList(player.getName(), pName, "player");
 					plugin.sendMessage(player, "Player "+pName+" Removed from your global access list.");
 				}
 			}
 		}
 	} else {
-		plugin.sendMessage(player, "You dont have permission to use SecureChests. (securechests.lock)");
+		plugin.sendMessage(player, "You don't have permission to use SecureChests. (securechests.lock)");
 	}
 	return true;
 }

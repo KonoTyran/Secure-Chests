@@ -43,13 +43,6 @@ public class SecureChestsBlockListener implements Listener {
 			ccS = ccS.add(0,0,1);
 			ccW = ccW.add(1,0,0);
 			
-			if (ccN.getBlock().getTypeId() == 54) {
-				chestloc = chestloc.subtract(0, 0, 1);
-			} else if (ccE.getBlock().getTypeId() == 54) {
-				chestloc = chestloc.subtract(1, 0, 0);
-			}
-			//END double chest detection
-			
 			Boolean chestChange = false;
 			if (ccN.getBlock().getTypeId() == 54) {
 				chestloc = chestloc.subtract(0,0,1);
@@ -65,25 +58,24 @@ public class SecureChestsBlockListener implements Listener {
 			
 			
 			//create the YAML string location
-			String yamlNewLoc = b.getLocation().getWorld().getName() + "." + b.getLocation().getBlockX() + "_" + b.getLocation().getBlockY() + "_" + b.getLocation().getBlockZ();
-			String yamlOldLoc = chestloc.getWorld().getName() + "." + chestloc.getBlockX() + "_" + chestloc.getBlockY() + "_" + chestloc.getBlockZ();
+			//String yamlNewLoc = b.getLocation().getWorld().getName() + "." + b.getLocation().getBlockX() + "_" + b.getLocation().getBlockY() + "_" + b.getLocation().getBlockZ();
+			//String yamlOldLoc = chestloc.getWorld().getName() + "." + chestloc.getBlockX() + "_" + chestloc.getBlockY() + "_" + chestloc.getBlockZ();
 			
 			//get owner name if any
-			String lockname = plugin.getStorageConfig().getString(yamlOldLoc.concat(".owner"));
-			if(lockname == null)
+			//String lockname = plugin.getStorageConfig().getString(yamlOldLoc.concat(".owner"));
+			
+			Lock lock = plugin.getLockManager().getLock(chestloc);
+			if(!lock.isLocked())
 				return;
-
 	
-			if(lockname.equals(player.getName())) {
+			if(lock.getOwner().equals(player.getName())) {
 				plugin.sendMessage(player, "Chest lock extended.");
 				if (chestChange) {
-					plugin.getStorageConfig().set(yamlOldLoc, null);
-					plugin.getStorageConfig().set(yamlNewLoc+".owner", lockname);
+					lock.setLocation(b.getLocation());
+					lock.updateLock();
 				}
-				
-				plugin.saveStorageConfig();
 			} else {
-				plugin.sendMessage(player, "Unable to modify chest owned by ".concat(lockname));
+				plugin.sendMessage(player, "Unable to modify chest owned by ".concat(lock.getOwner()));
 				event.setCancelled(true);
 			}
 		}
@@ -143,8 +135,8 @@ public class SecureChestsBlockListener implements Listener {
         	String blockName = SecureChests.BLOCK_LIST.get(b.getTypeId());
         	//get name AFTER position corrections!
         	
-        	Lock lock = new Lock(plugin);
-        	lock.setLocation(blockLoc);
+        	Lock lock = plugin.getLockManager().getLock(blockLoc);;
+        	//lock.setLocation(blockLoc);
 		
         	if(lock.isLocked()) {
         		//The block has a locked status. lets now get the owner

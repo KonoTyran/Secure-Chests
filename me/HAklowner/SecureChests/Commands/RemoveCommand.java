@@ -14,8 +14,8 @@ public class RemoveCommand {
 
 	private final SecureChests plugin;
 
-	public RemoveCommand(SecureChests instance) {
-		plugin = instance;
+	public RemoveCommand() {
+		plugin = SecureChests.getInstance();
 	}
 
 
@@ -44,18 +44,18 @@ public class RemoveCommand {
 
 		if (sender.hasPermission("securechests.lock")) {
 			if (args.length != 1) {
-				plugin.sendMessage(player, "Correct command useage: /sc remove username");
+				plugin.sendMessage(player, "Correct command usage: /sc remove username");
 			} else {
 				if (args[0].toLowerCase().startsWith("c:") && plugin.usingSimpleClans) { //they want to add a clan not a player
 					String clanTag = args[0].substring(2);
 					ClanManager cm = plugin.simpleClans.getClanManager();
 					if (cm.isClan(clanTag)) {
 						Clan clan = cm.getClan(clanTag);
-						plugin.sendMessage(player, "will remove clan " + clan.getTagLabel() + ChatColor.WHITE + " from the next owned block you interact with.");
+						plugin.sendMessage(player, "Will remove clan " + clan.getTagLabel() + ChatColor.WHITE + " from the next owned block you interact with.");
 						plugin.scCmd.put(player, 8); //value of 8 remove clan from access list.
 						plugin.scClan.put(player, clan);
 					} else {
-						plugin.sendMessage(player, "will remove clan " + clanTag + " from the next owned block you interact with.");
+						plugin.sendMessage(player, "Will remove clan " + clanTag + " from the next owned block you interact with.");
 						plugin.scCmd.put(player, 4); //value of 8 add clan to deny list.
 						plugin.scAList.put(player, args[0].toLowerCase()); //inactive clan. pass though with c:clantag
 					}
@@ -63,13 +63,13 @@ public class RemoveCommand {
 					plugin.sendMessage(player, "Server not using Simple Clans, unable to add clan to access list.");
 				} else {
 					String pName = plugin.myGetPlayerName(args[0]);
-					plugin.sendMessage(player, "will remove user " + pName + " from the next owned block you interact with.");
+					plugin.sendMessage(player, "Will remove user " + pName + " from the next owned block you interact with.");
 					plugin.scAList.put(player , pName);
 					plugin.scCmd.put(player, 4);
 				}
 			}
 		} else {
-			plugin.sendMessage(player, "You dont have permission to use SecureChests. (securechests.lock)");
+			plugin.sendMessage(player, "You don't have permission to use SecureChests. (securechests.lock)");
 		}
 		return true;
 	}
