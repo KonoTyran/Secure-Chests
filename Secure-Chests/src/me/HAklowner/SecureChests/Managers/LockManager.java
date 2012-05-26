@@ -6,17 +6,17 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import org.bukkit.Location;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
-
 import me.HAklowner.SecureChests.Lock;
 import me.HAklowner.SecureChests.SecureChests;
 import me.HAklowner.SecureChests.Storage.DBCore;
 import me.HAklowner.SecureChests.Storage.SQLite;
+import org.bukkit.Location;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 
 public class LockManager {
 
@@ -26,7 +26,7 @@ public class LockManager {
 
 	public LockManager() {
 		plugin = SecureChests.getInstance();
-		logger = SecureChests.getLog();
+		logger = logger;
 		initalizeDB();
 
 	}
@@ -96,13 +96,13 @@ public class LockManager {
 
 		try {
 			if(res.next()) {
-				
+
 				int lockID = res.getInt("id");
-				
+
 				lock.setID(lockID);
 				lock.setOwner(res.getString("Owner"));
 				lock.setPublic(res.getBoolean("Public"));
-				
+
 				//Get Local access list.
 				String accessQuery = "SELECT * FROM `SC_Access` WHERE" +
 						"`Lock ID` = " + lockID;
@@ -114,7 +114,7 @@ public class LockManager {
 				while(aRes.next()) {
 					String type = aRes.getString("Type");
 					String name = aRes.getString("Name");
-					Boolean ac = aRes.getBoolean("Access");;
+					Boolean ac = aRes.getBoolean("Access");
 					if (type.equals("player"))
 						playerAccessList.put(name, ac);
 					if (type.equals("clan"))
@@ -123,7 +123,7 @@ public class LockManager {
 
 				lock.setPlayerAccessList(playerAccessList);
 				lock.setClanAccessList(clanAccessList);
-				
+
 			} else { //empty lock don't execute any more queries.
 				return lock;
 			}
@@ -148,7 +148,7 @@ public class LockManager {
 		String query = "UPDATE `SC_Locks` SET `owner` = '"+lock.getOwner()+"', `Public` = '"+pub+"', `PosX` = '"+lock.getLocation().getBlockX()+"', `PosY` = '"+lock.getLocation().getBlockY()+"', `PosZ` = '"+lock.getLocation().getBlockZ()+"' WHERE `id` =" + lock.getID();
 		core.execute(query);
 	}
-	
+
 	//action == true, add
 	//action == false, remove.
 	public void addToAcessList(Lock lock, String name, String type, Boolean access) {
@@ -158,23 +158,23 @@ public class LockManager {
 		String query = "INSERT INTO `SC_Access` (`Lock ID`,`Type`,`Name`,`Access`) VALUES ('"+lock.getID()+"','"+type+"','"+name+"','"+na+"')";
 		core.execute(query);
 	}
-	
+
 	public void removeFromAccessList(Lock lock, String name, String type) {
 		String query = "DELETE FROM `SC_Access` WHERE `Lock ID` = "+lock.getID()+" AND `Name` = '"+name+"' AND `type` = '"+type+"'";
 		core.execute(query);
 	}
-	
+
 	public void removeLock(Lock lock) {
 		String query = "DELETE FROM `SC_Locks` WHERE `id` = " + lock.getID();
 		core.execute(query);
 		query = "DELETE FROM `SC_Access` WHERE `Lock ID` = " + lock.getID();
 		core.execute(query);
 	}
-	
+
 	public Boolean playerOnGlobalList(String owner, String user) {
 		String query = "SELECT `Name` FROM `SC_Global` WHERE `Player` = '"+owner+"' AND `Type` = 'player'";
 		ResultSet result = core.select(query);
-		
+
 		try {
 			while(result.next()) {
 				if(user.equals(result.getString("Name")))
@@ -186,11 +186,11 @@ public class LockManager {
 		}
 		return false;
 	}
-	
+
 	public Boolean clanOnGlobalList(String owner, String clantag) {
 		String query = "SELECT `Name` FROM `SC_Global` WHERE `Player` = '"+owner+"' AND `Type` = 'clan'";
 		ResultSet result = core.select(query);
-		
+
 		try {
 			while(result.next()) {
 				if(clantag.equals(result.getString("Name")))
@@ -207,20 +207,78 @@ public class LockManager {
 		String query = "INSERT INTO `SC_Global` (`Player`,`Type`,`Name`) VALUES ('"+owner+"','"+type+"','"+name+"')";
 		core.execute(query);
 	}
-	
+
 	public void removeFromGlobalList(String owner, String name, String type) {
 		String query = "DELETE FROM `SC_Global` WHERE `Player` = '"+owner+"' AND `Type` = '"+type+"' AND `Name` = '"+name+"'";
 		core.execute(query);
 	}
-	
+
+
+	private boolean purgeConsole = false;
+	private Player purgePlayer;
+	private void purgeMessage(String msg) {
+		if (!purgeConsole) { //send to player if player started command
+			plugin.sendMessage(purgePlayer, msg);
+		}
+		//send to console regardless of who started it.
+		SecureChests.log("[" + plugin.getDescription().getName() + "] "+msg);
+	}
+
+	public void purgeGhostEntry(Player player) {
+		purgeConsole = false;
+		purgePlayer = player;
+		purgeGhostEntry();
+	}
+
+	public void purgeGhostEntry(boolean fromconsole) {
+		if (fromconsole) { 
+			purgeConsole = true;
+			purgeGhostEntry();
+		}
+	}
+
+	private void purgeGhostEntry() {
+		purgeMessage("Starting Ghost Purge");
+
+		//limit to 200 locks loaded at a time.
+		int pass = 0;
+		boolean keepgoing = true;
+		int total = 0;
+		while (keepgoing) {
+			try {
+				String query = "SELECT * FROM `SC_Locks` ORDER BY `id` LIMIT 200 OFFSET "+ ((pass*200)-total);
+				ResultSet result = core.select(query);
+				int count = 0;
+				while(result.next()) {
+					Location loc = new Location(plugin.getServer().getWorld(result.getString("world")), result.getDouble("PosX"), result.getDouble("PosY"), result.getDouble("PosZ"));
+					if (!plugin.blockStatus.containsKey(loc.getBlock().getTypeId())) {
+						//ohh no its a ghost entry! squash it!
+						String delquery = "DELETE FROM `SC_Locks` WHERE `id` = " + result.getInt("id");
+						core.execute(delquery);
+						total++;
+					}
+				}
+				if (count == 0) { //no rows returned we reached the end!
+					keepgoing = false;
+				}
+			} catch (SQLException e) {
+				purgeMessage("there has been an error while attempting to purge ghost entries. :(");
+				keepgoing = false;
+			}
+			pass++;
+			purgeMessage("purged " + total + " ghost locks so far!");
+		}
+		purgeMessage("Purge Complete " +total+ " Ghost locks purged");
+	}
+
 	public void updateFromFlatFile() {
-		SecureChests.getLog().info("[SecureChests] Starting Upgrade (note server will hang while upgrade is taking place");
+		logger.info("[SecureChests] Starting Upgrade (note server will hang while upgrade is taking place");
 		File storageConfigFile = new File("plugins/SecureChests", "storage.yml");
 		FileConfiguration storageConfig =  YamlConfiguration.loadConfiguration(storageConfigFile);
 		Set<String> worldList = storageConfig.getConfigurationSection("").getKeys(false);
 		int total = 0;
 		for(String world:worldList) {
-			SecureChests.getLog().info("[SecureChests] starting import of world " + world);
+			logger.log(Level.INFO, "[SecureChests] starting import of world {0}", world);
 			Set<String> locationList = storageConfig.getConfigurationSection(world).getKeys(false);
 			int worldtotal = 0;
 			for(String location:locationList) {
@@ -233,8 +291,8 @@ public class LockManager {
 				total++;
 				worldtotal++;
 				if (worldtotal % 50 == 0) {
-					SecureChests.getLog().info("[SecureChests] " + worldtotal + "/"+locationList.size()+" Processed in world " + world);
-					SecureChests.getLog().info("[SecureChests] "+total + " across all worlds");
+					logger.log(Level.INFO, "[SecureChests] {0}/{1} Processed in world {2}", new Object[]{worldtotal, locationList.size(), world});
+					logger.log(Level.INFO, "[SecureChests] {0} across all worlds", total);
 				}
 				core.execute("INSERT INTO `SC_Locks` (`World`, `owner`, `PosX`, `PosY`, `PosZ`, `Public`) VALUES ('"+world+"', '"+owner+"', '"+loc[0]+"', '"+loc[1]+"', '"+loc[2]+"', '"+pub+"')");
 				String query = "SELECT `id` FROM `SC_Locks` WHERE" +
@@ -249,7 +307,7 @@ public class LockManager {
 						id = idres.getInt("id");
 					}
 				} catch (SQLException e) {
-					e.printStackTrace();
+					return;
 				}
 				ConfigurationSection acs = storageConfig.getConfigurationSection(world+"."+location+".access");
 				if (acs != null) {
@@ -263,7 +321,7 @@ public class LockManager {
 						core.execute(pquery);
 					}
 				}
-				
+
 				ConfigurationSection ccs = storageConfig.getConfigurationSection(world+"."+location+".access");
 				if(ccs != null) {
 					Set<String> caccess = ccs.getKeys(false);
@@ -277,11 +335,12 @@ public class LockManager {
 					}
 				}
 			}
-			SecureChests.getLog().info("[SecureChests] " + worldtotal + "/"+locationList.size()+" Processed in world " + world); SecureChests.getLog().info("[SecureChests]"+total + " across all worlds");
+			logger.log(Level.INFO, "[SecureChests] {0}/{1} Processed in world {2}", new Object[]{worldtotal, locationList.size(), world});
+			logger.log(Level.INFO, "[SecureChests]{0} across all worlds", total);
 		}	
-		SecureChests.getLog().info("[SecureChests] Upgrade Complete! Processed " + total + " entries");
+		logger.log(Level.INFO, "[SecureChests] Upgrade Complete! Processed {0} entries", total);
 	}
-	
+
 	public void closeConnection()
 	{
 		core.close();

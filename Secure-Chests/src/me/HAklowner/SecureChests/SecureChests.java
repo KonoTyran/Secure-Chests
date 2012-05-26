@@ -2,21 +2,20 @@ package me.HAklowner.SecureChests;
 
 import java.io.IOException;
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import me.HAklowner.SecureChests.Commands.*;
-import me.HAklowner.SecureChests.Listeners.*;
+import me.HAklowner.SecureChests.Commands.LockCommand;
+import me.HAklowner.SecureChests.Commands.SCCommand;
+import me.HAklowner.SecureChests.Commands.UnLockCommand;
+import me.HAklowner.SecureChests.Listeners.SecureChestsBlockListener;
+import me.HAklowner.SecureChests.Listeners.SecureChestsExplosionListener;
+import me.HAklowner.SecureChests.Listeners.SecureChestsPlayerListener;
+import me.HAklowner.SecureChests.Listeners.SecureChestsRedstoneListener;
 import me.HAklowner.SecureChests.Managers.LockManager;
-import me.HAklowner.SecureChests.Utils.*;
+import me.HAklowner.SecureChests.Utils.MetricsSC;
 import net.sacredlabyrinth.phaed.simpleclans.Clan;
 import net.sacredlabyrinth.phaed.simpleclans.SimpleClans;
-
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -37,7 +36,7 @@ public class SecureChests extends JavaPlugin {
 	private final SecureChestsExplosionListener explosionListener = new SecureChestsExplosionListener(this);
 
 	//Define the logger
-	static Logger logger = Logger.getLogger("SecureChests");
+	static final Logger logger = Logger.getLogger("SecureChests");
 
 
 	//simpleClan vars.
@@ -218,7 +217,7 @@ public class SecureChests extends JavaPlugin {
 			helpList.add(ChatColor.WHITE + "/sc purge" + ChatColor.GRAY + " - purge ghost locks from database");
 		}
 
-		if (helpList.size() == 0 ) {
+		if (helpList.isEmpty() ) {
 			helpList.add("You don't have access to use SecureChests. :( (securechests.lock)");
 		}
 
@@ -255,6 +254,7 @@ public class SecureChests extends JavaPlugin {
 		}
 	}
 
+    @Override
 	public void onEnable() {
 		instance = this;
 		PluginManager pm = this.getServer().getPluginManager();
@@ -280,7 +280,7 @@ public class SecureChests extends JavaPlugin {
 		{
 			simpleClans = ((SimpleClans) plug);
 			usingSimpleClans = true;
-			logger.info("[" + getDescription().getName() + "] SimpleClans found.");    
+			logger.log(Level.INFO, "[{0}] SimpleClans found.", getDescription().getName());    
 		}
 
 		metrics();
@@ -293,7 +293,7 @@ public class SecureChests extends JavaPlugin {
 		LockManager = new LockManager();
 		
 		
-		logger.info("[" + getDescription().getName() + "] " + getDescription().getVersion() + " enabled.");    
+		logger.log(Level.INFO, "[{0}] {1} enabled.", new Object[]{getDescription().getName(), getDescription().getVersion()});    
 
 
 	}
@@ -323,12 +323,13 @@ public class SecureChests extends JavaPlugin {
 	public void reloadPlugin() {
 		reloadConfig();
 		initBlockData();
-		logger.info("[" + getDescription().getName() + "] Reload complete");
+		logger.log(Level.INFO, "[{0}] Reload complete", getDescription().getName());
 	}
 
+    @Override
 	public void onDisable() {
 		getLockManager().closeConnection();
-		logger.info("[" + getDescription().getName() + "] " + getDescription().getVersion() + " Disabled."); 
+		logger.log(Level.INFO, "[{0}] {1} Disabled.", new Object[]{getDescription().getName(), getDescription().getVersion()}); 
 	}
 
 	// will return :
