@@ -16,7 +16,7 @@ public class Lock {
 	private String owner;
 	private Map<String, Boolean> playerAccess;
 	private Map<String, Boolean> clanAccess;
-	private Boolean isPublic;
+	private boolean isPublic;
 	private Location lockLoc;
 	private int id;
 	//private int id;
@@ -307,7 +307,7 @@ public class Lock {
 		*/
 	}
 
-	public Integer getAccess(String player) {	
+	public int getAccess(String player) {	
 		//Return what access player has.
 		
 		if (player.equals(getOwner())) {
@@ -345,7 +345,7 @@ public class Lock {
 		return 0;
 	}
 
-	public Integer getAccess(Player player) {
+	public int getAccess(Player player) {
 		return getAccess(player.getName());
 	}
 
@@ -369,7 +369,7 @@ public class Lock {
 		this.id = id;
 	}
 
-	public Boolean isLocked() {
+	public boolean isLocked() {
 		String lockname = getOwner();
 		if (lockname != null)
 			return true;
