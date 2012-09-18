@@ -5,7 +5,11 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import me.HAklowner.SecureChests.Permission;
 import me.HAklowner.SecureChests.SecureChests;
+import me.HAklowner.SecureChests.Config.Config;
+import me.HAklowner.SecureChests.Config.Language;
+import me.HAklowner.SecureChests.Utils.Vlevel;
 
 public class UnLockCommand implements CommandExecutor {
 
@@ -38,12 +42,12 @@ public class UnLockCommand implements CommandExecutor {
 			return true;
 		}
 		
-		if (sender.hasPermission("securechests.lock")) {
-			plugin.sendMessage(player, "Now interact with a container/door to unlock it.");
+		if (Permission.has(player, Permission.LOCK)) {
+			plugin.sendMessage(Vlevel.COMMAND, player, Config.getLocal(Language.INTERACT_UNLOCK));
 			plugin.scCmd.put(player, 2);
 			return true;
 		} else {
-			plugin.sendMessage(player, "You don't have permission to use SecureChests. (securechests.lock)");
+			plugin.sendMessage(Vlevel.COMMAND, player, Config.getLocal(Language.DONT_HAVE_PERMISSION).replace("%permission", Permission.LOCK.toString()));
 		}
 		return false;
 	}

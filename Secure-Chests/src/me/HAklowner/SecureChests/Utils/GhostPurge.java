@@ -29,7 +29,7 @@ public class GhostPurge {
 
 	private void sendmessage(String msg) {
 		if (!console) { //send to player if player started command
-			plugin.sendMessage(player, msg);
+			plugin.sendMessage(Vlevel.COMMAND, player, msg);
 		}
 		//send to console regardless of who started it.
 		SecureChests.log("[" + plugin.getDescription().getName() + "] "+msg);

@@ -1,17 +1,20 @@
 package me.HAklowner.SecureChests.Listeners;
 
 import me.HAklowner.SecureChests.Lock;
+import me.HAklowner.SecureChests.Permission;
 import me.HAklowner.SecureChests.SecureChests;
+import me.HAklowner.SecureChests.Utils.Vlevel;
 
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.material.Door;
 
 public class SecureChestsBlockListener implements Listener {
 
@@ -22,11 +25,14 @@ public class SecureChestsBlockListener implements Listener {
 		plugin = instance;
 	}
 	
+	private static final BlockFace[] BLOCK_FACES = {BlockFace.EAST, BlockFace.WEST, BlockFace.NORTH, BlockFace.SOUTH};
+	
 	@EventHandler(priority = EventPriority.LOW)
 	public void onBlockPlace(final BlockPlaceEvent event) {
 	  
 		Block b=event.getBlock();
-		if(b.getTypeId() == 54) { //make sure block click is a chest.
+		if(b.getType() == Material.CHEST) { //make sure its a chest
+		/*if(b.getTypeId() == 54) { //make sure block click is a chest.
 			
 			Player player = event.getPlayer();
 			
@@ -39,43 +45,63 @@ public class SecureChestsBlockListener implements Listener {
 			Location ccW = b.getLocation();
 			
 			ccN = ccN.subtract(0,0,1);
-			ccE = ccE.subtract(1,0,0);
+			ccW = ccW.subtract(1,0,0);
 			ccS = ccS.add(0,0,1);
-			ccW = ccW.add(1,0,0);
+			ccE = ccE.add(1,0,0);
 			
 			Boolean chestChange = false;
 			if (ccN.getBlock().getTypeId() == 54) {
-				chestloc = chestloc.subtract(0,0,1);
+				plugin.sendMessage(Vlevel.DEBUG, player, "Chest found North");
+				chestloc = ccN;
 			} else if (ccE.getBlock().getTypeId() == 54) {
-				chestloc = chestloc.subtract(1, 0, 0);
+				plugin.sendMessage(Vlevel.DEBUG, player, "Chest found East");
+				chestloc = ccE;
+				chestChange = true;
 			} else if (ccS.getBlock().getTypeId() == 54) {
-				chestloc = chestloc.add(0, 0, 1);
+				plugin.sendMessage(Vlevel.DEBUG, player, "Chest found South");
+				chestloc = ccS;
 				chestChange = true;
 			} else if (ccW.getBlock().getTypeId() == 54) {
-				chestloc = chestloc.add(1, 0, 0);
-				chestChange = true;
+				plugin.sendMessage(Vlevel.DEBUG, player, "Chest found West");
+				chestloc = ccW;
+			}
+			*/
+			Player player = event.getPlayer();
+			Location chestloc = b.getLocation();
+			boolean chestChange = false;
+			
+			for (BlockFace face : BLOCK_FACES)
+			{
+				Block reletive = b.getRelative(face);
+				if (reletive.getType() == Material.CHEST)
+				{
+					if (face.equals(BlockFace.SOUTH) || face.equals(BlockFace.WEST))
+					{
+						chestChange = true;
+					}
+					plugin.sendMessage(Vlevel.DEBUG, player, "Block found at: " + face.toString());
+					chestloc = reletive.getLocation();
+				}
 			}
 			
 			
-			//create the YAML string location
-			//String yamlNewLoc = b.getLocation().getWorld().getName() + "." + b.getLocation().getBlockX() + "_" + b.getLocation().getBlockY() + "_" + b.getLocation().getBlockZ();
-			//String yamlOldLoc = chestloc.getWorld().getName() + "." + chestloc.getBlockX() + "_" + chestloc.getBlockY() + "_" + chestloc.getBlockZ();
 			
-			//get owner name if any
-			//String lockname = plugin.getStorageConfig().getString(yamlOldLoc.concat(".owner"));
+			plugin.sendMessage(Vlevel.DEBUG, player, "Looking for lock at loc: " + chestloc.getBlockX() + "," + chestloc.getBlockY() +","+ chestloc.getBlockZ() );
 			
-			Lock lock = plugin.getLockManager().getLock(chestloc);
-			if(!lock.isLocked())
+			Lock lock = plugin.getLockManager().getLock(chestloc, false);
+			if(lock == null)
 				return;
+			
+			plugin.sendMessage(Vlevel.DEBUG, player, "lock found at: " + chestloc.getBlockX() + "," + chestloc.getBlockY() +","+ chestloc.getBlockZ());
 	
 			if(lock.getOwner().equals(player.getName())) {
-				plugin.sendMessage(player, "Chest lock extended.");
+				plugin.sendMessage(Vlevel.COMMAND, player, "Chest lock extended.");
 				if (chestChange) {
 					lock.setLocation(b.getLocation());
 					lock.updateLock();
 				}
 			} else {
-				plugin.sendMessage(player, "Unable to modify chest owned by ".concat(lock.getOwner()));
+				plugin.sendMessage(Vlevel.OTHER, player, "Unable to modify chest owned by ".concat(lock.getOwner()));
 				event.setCancelled(true);
 			}
 		}
@@ -89,69 +115,40 @@ public class SecureChestsBlockListener implements Listener {
 
         //START NEW CODE
         
-        if((SecureChests.BLOCK_LIST.containsKey(b.getTypeId()) && plugin.blockStatus.get(b.getTypeId())) || (b.getLocation().add(0,1,0).getBlock().getTypeId() == 64 && plugin.blockStatus.get(64))) {//check to see if block clicked is on the watch list and is enabled.
+        if(plugin.isBlockEnabled(b.getTypeId()) || b.getLocation().add(0,1,0).getBlock().getTypeId() == 64) {//check to see if lock is enabled for said block. and check for one block higher incase its a door.
         	
         	Location blockLoc = b.getLocation();
         	
-        	
-        	if(b.getTypeId() == 54) { //do double chest location corrections
-                Location ccN = b.getLocation();
-                Location ccE = b.getLocation();
-                Location ccS = b.getLocation();
-                Location ccW = b.getLocation();
-
-                ccN = ccN.subtract(0,0,1);
-                ccE = ccE.subtract(1,0,0);
-                ccS = ccS.add(0,0,1);
-                ccW = ccW.add(1,0,0);
-
-                //Boolean dchest = false;
-                if (ccN.getBlock().getTypeId() == 54) {
-                    blockLoc = blockLoc.subtract(0, 0, 1);
-                //    dchest = true;
-                } else if (ccE.getBlock().getTypeId() == 54) {
-                    blockLoc = blockLoc.subtract(1, 0, 0);
-                //    dchest = true;
-                } else if (ccS.getBlock().getTypeId() == 54) {
-                //    dchest = true;
-                } else if (ccW.getBlock().getTypeId() == 54) {
-                //    dchest = true;
-                }
-        	} //END Chest location corrections.
-        	
+        	plugin.sendMessage(Vlevel.DEBUG, player, "--Staring block break checks--");
+        	plugin.sendMessage(Vlevel.DEBUG, player, "Original ceck: " + blockLoc.getBlockX() + "," + blockLoc.getBlockY() +","+ blockLoc.getBlockZ() );
+			
         	//Start Door Corrections
         	if (b.getLocation().add(0,1,0).getBlock().getTypeId() == 64) {
         		blockLoc = blockLoc.add(0,1,0);
-        	}
-        	
-            else if(b.getTypeId() == 64) { //make sure block click is a DOOR
-    			Door d = (Door)b.getState().getData();
-    			
-    			if (d.isTopHalf()) { //You clicked on the top part of the door! correct location to reflect bottom part
-    				blockLoc = blockLoc.subtract(0,1,0);
-    			}
             }//End Door Corrections
         	
-        	String blockName = SecureChests.BLOCK_LIST.get(b.getTypeId());
+        	String blockName = plugin.getBlockName(b.getTypeId());
         	//get name AFTER position corrections!
         	
-        	Lock lock = plugin.getLockManager().getLock(blockLoc);;
+        	plugin.sendMessage(Vlevel.DEBUG, player, "second check: " + blockLoc.getBlockX() + "," + blockLoc.getBlockY() +","+ blockLoc.getBlockZ() );
+
+        	Lock lock = plugin.getLockManager().getLock(blockLoc);
         	//lock.setLocation(blockLoc);
 		
-        	if(lock.isLocked()) {
+        	if(lock != null) {
         		//The block has a locked status. lets now get the owner
         		String owner = lock.getOwner();
         		Integer access = lock.getAccess(player);
         		if(access == 1) { //it's yours yay!
         			lock.unlock();
-        			plugin.sendMessage(player, "Removed lock on " + blockName + ".");
+        			plugin.sendMessage(Vlevel.COMMAND, player, "Removed lock on " + blockName + ".");
         			return;
-        		} else if (player.hasPermission("securechests.bypass.break")) { //you have the break bypass.
+        		} else if (Permission.has(player, Permission.BYPASS_BREAK)) { //you have the break bypass.
         			lock.unlock();
-        			plugin.sendMessage(player, "Breaking " + owner + "'s "+ blockName +".");
+        			plugin.sendMessage(Vlevel.COMMAND, player, "Breaking " + owner + "'s "+ blockName +".");
         			return;
         		} else {
-        			plugin.sendMessage(player, "Can not break " + blockName + " owned by " + owner + ".");
+        			plugin.sendMessage(Vlevel.DENY, player, "Can not break " + blockName + " owned by " + owner + ".");
         			event.setCancelled(true);
         			return;
         		}

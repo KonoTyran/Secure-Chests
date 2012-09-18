@@ -5,7 +5,11 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import me.HAklowner.SecureChests.Permission;
 import me.HAklowner.SecureChests.SecureChests;
+import me.HAklowner.SecureChests.Config.Config;
+import me.HAklowner.SecureChests.Config.Language;
+import me.HAklowner.SecureChests.Utils.Vlevel;
 
 public class LockCommand implements CommandExecutor {
 
@@ -39,19 +43,19 @@ public class LockCommand implements CommandExecutor {
 			return true;
 		}
 		
-		if(args.length == 1 && sender.hasPermission("securechests.bypass.lock")) {
+		if(args.length == 1 && Permission.has(player, Permission.BYPASS_LOCK)) {
 			String pName = plugin.myGetPlayerName(args[0]);
-			plugin.sendMessage(player, "Now interact with a container/door to lock it for "+pName+".");
+			plugin.sendMessage(Vlevel.COMMAND, player, Config.getLocal(Language.INTERACT_LOCK_OTHER).replace("%username", pName));
 			plugin.scAList.put(player, pName);
 			plugin.scCmd.put(player, 6);
 			return true;
 		}
-		if (sender.hasPermission("securechests.lock")) {
-			plugin.sendMessage(player, "Now interact with a container/door to lock it.");
+		if (Permission.has(player, Permission.LOCK)) {
+			plugin.sendMessage(Vlevel.COMMAND, player, Config.getLocal(Language.INTERACT_LOCK));
 			plugin.scCmd.put(player, 1);
 			return true;
 		} else {
-			plugin.sendMessage(player, "You don't have permission to use SecureChests. (securechests.lock)");
+			plugin.sendMessage(Vlevel.COMMAND, player, Config.getLocal(Language.DONT_HAVE_PERMISSION).replace("%permission", Permission.LOCK.toString()));
 		}
 		
 		return false;

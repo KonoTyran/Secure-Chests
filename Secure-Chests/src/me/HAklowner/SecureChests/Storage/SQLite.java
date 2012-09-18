@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.PreparedStatement;
 import java.util.logging.Logger;
 
 import me.HAklowner.SecureChests.SecureChests;
@@ -144,5 +145,47 @@ public class SQLite implements DBCore{
         }
         return null;
     }
+    
+    public Boolean existsColumn(String tabell, String colum)
+    {
+        try
+        {
+            ResultSet colums = getConnection().getMetaData().getColumns(null, null, tabell, colum);
+            return colums.next();
+        }
+        catch (SQLException e)
+        {
+           SecureChests.getLog().severe("Failed to check if column '" + colum + "' exists: " + e.getMessage());
+            return false;
+        }
+    }
+
+	@Override
+	public ResultSet select(PreparedStatement query)
+	{
+		try
+		{
+			return query.executeQuery();
+		}
+		catch (SQLException e)
+		{
+            log.severe("Error at SQL Query: " + e.getMessage());
+            log.severe("Query: " + query);
+		}
+		return null;
+	}
+
+	@Override
+	public PreparedStatement PrepareStatement(String query)
+	{
+		try
+		{
+			return getConnection().prepareStatement(query);
+		}
+		catch (SQLException e)
+		{
+			return null;
+		}
+	}
 
 }

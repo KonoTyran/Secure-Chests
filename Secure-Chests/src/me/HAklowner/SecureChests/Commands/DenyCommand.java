@@ -8,7 +8,12 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import me.HAklowner.SecureChests.Permission;
 import me.HAklowner.SecureChests.SecureChests;
+import me.HAklowner.SecureChests.Config.Config;
+import me.HAklowner.SecureChests.Config.Language;
+import me.HAklowner.SecureChests.Utils.Atype;
+import me.HAklowner.SecureChests.Utils.Vlevel;
 
 public class DenyCommand {
 
@@ -42,38 +47,68 @@ public class DenyCommand {
 			return true;
 		}
 
-		if (sender.hasPermission("securechests.lock")) {
-			if (args.length != 1) {
-				plugin.sendMessage(player, "Correct command usage: /sc deny username");
-				return true;
-			} else {
-				if (args[0].toLowerCase().startsWith("c:") && plugin.usingSimpleClans) { //they want to add a clan not a player
+		if (Permission.has(player, Permission.LOCK))
+		{
+			if (args.length != 1)
+			{
+				plugin.sendMessage(Vlevel.COMMAND, player, 
+						Config.getLocal(Language.INVALID_SYNTAX)
+						.replace("%command", 
+								ChatColor.AQUA + "/sc " + Config.getLocal(Language.COMMAND_DENY) + " " + Config.getLocal(Language.USERNAME) + ChatColor.WHITE + " "+ Config.getLocal(Language.OR) +" " +
+										ChatColor.AQUA + "/sc " + Config.getLocal(Language.COMMAND_DENY) + " c:" + Config.getLocal(Language.CLANTAG) + ChatColor.WHITE + " "+ Config.getLocal(Language.OR) +" " +
+										ChatColor.AQUA + "/sc " + Config.getLocal(Language.COMMAND_DENY) + " g:" + Config.getLocal(Language.GROUP) + ChatColor.WHITE
+								)
+						);
+			}
+			else
+			{
+				if (args[0].toLowerCase().startsWith("c:") && plugin.usingSimpleClans) //they want to add a clan not a player
+				{ 
 					String clanTag = args[0].substring(2);
 					ClanManager cm = plugin.simpleClans.getClanManager();
-					if (cm.isClan(clanTag)) {
+					if (cm.isClan(clanTag))
+					{
 						Clan clan = cm.getClan(clanTag);
-						plugin.sendMessage(player, "will add clan " + clan.getTagLabel() + ChatColor.WHITE + " to the deny list of next owned block you interact with.");
-						plugin.scCmd.put(player, 9); //value of 9 add clan to deny list.
-						plugin.scClan.put(player, clan);
-						return true;
-					} else {
-						plugin.sendMessage(player, "Clan not found.");
-						return true;
+						plugin.sendMessage(Vlevel.COMMAND, player, Config.getLocal(Language.INTERACT_DENY_CLAN).replace("%clantag", clanTag + ChatColor.WHITE));
+						plugin.scCmd.put(player, 5); //value of 3 add to access list.
+						plugin.scAList.put(player, clan.getTag()); //clan tag.
+						plugin.scAtype.put(player, Atype.Clan); //we want to add a clan.
 					}
-				} else if (args[0].toLowerCase().startsWith("c:") && !plugin.usingSimpleClans) {
-					plugin.sendMessage(player, "Server not using Simple Clans, unable to add clan to access list.");
-					return true;
-				} else {
+					else
+					{
+						plugin.sendMessage(Vlevel.COMMAND, player, Config.getLocal(Language.CLAN_NOT_FOUND));
+					}
+				}
+				else if (args[0].toLowerCase().startsWith("c:") && !plugin.usingSimpleClans)
+				{
+					plugin.sendMessage(Vlevel.COMMAND, player, Config.getLocal(Language.NOT_USING_SIMPLE_CLANS));
+				}
+				else if (args[0].toLowerCase().startsWith("g:") && plugin.vaultEnabled())
+				{
+					String group = args[0].substring(2);
+					plugin.sendMessage(Vlevel.COMMAND, player, Config.getLocal(Language.INTERACT_DENY_GROUP).replace("%group", group));
+					plugin.scCmd.put(player, 5); //value of 5 to add to deny list
+					plugin.scAList.put(player, group); //clan tag.
+					plugin.scAtype.put(player, Atype.Group); //we want to add a clan.
+				}
+				else if (args[0].toLowerCase().startsWith("g:") && !plugin.vaultEnabled())
+				{
+					plugin.sendMessage(Vlevel.COMMAND, player, Config.getLocal(Language.NOT_USING_VAULT));
+				}
+				else
+				{
 					String pName = plugin.myGetPlayerName(args[0]);
-					plugin.sendMessage(player, "will add user " + pName + " to the deny list of the next owned block you interact with.");
+					plugin.sendMessage(Vlevel.COMMAND, player, Config.getLocal(Language.INTERACT_DENY_PLAYER).replace("%username", pName));
 					plugin.scAList.put(player , pName);
 					plugin.scCmd.put(player, 5);
-					return true;
+					plugin.scAtype.put(player, Atype.Player);
 				}
 			}
-		} else {
-			plugin.sendMessage(player, "You don't have permission to use SecureChests. (securechests.lock)");
-			return true;
 		}
+		else
+		{
+			plugin.sendMessage(Vlevel.COMMAND, player, Config.getLocal(Language.DONT_HAVE_PERMISSION).replace("%permission", Permission.LOCK.toString()));
+		}
+		return true;
 	}
 }
