@@ -1,0 +1,44 @@
+# SecureChests 0.7.0
+# You can now use the following settings to configure
+# SecureChests to lock Chests, Furnaces, Dispensers & Doors.
+
+#set each container to true/false to enable or disable locking.
+Active:
+  Chest: true
+  Furnace: true
+  Dispenser: true
+  Door: true
+  Trapdoor: true
+  Potion: true
+  Gate: true
+  Jukebox: true
+
+#set each to true/false to make a block immune to explosions while locked.
+Block_Explosions:
+  Chest: true
+  Furnace: true
+  Dispenser: true
+  Door: true
+  Trapdoor: true
+  Potion: true
+  Gate: true
+  Jukebox: true
+  
+
+#default notificaiton settings.  
+Notification:
+  Own: true
+  Other: true
+  Deny: true
+  Override: true
+
+#Purge Ghost entry's on startup ((EXPERIMENTAL))
+ghost_purge_on_startup: false
+
+
+#set to true to define custom id's of blocks that need protecting. (usefull for custom blocks in tekkit/spout servers)
+usecustom: false
+
+#define blocks here: using format ID:name
+custom:
+  

@@ -1,0 +1,83 @@
+name: SecureChests
+main: me.HAklowner.SecureChests.SecureChests
+version: 0.7.1
+dev-url: http://dev.bukkit.org/server-mods/secure-chests/
+author: HAklowner
+website: http://dev.bukkit.org/server-mods/secure-chests/
+description: SecureChests - Simple chest locking!
+softdepend: [SimpleClans, Vault, ChestShop]
+commands:
+   lock:
+      description: lock your chests
+   unlock:
+      description: unlock your chests
+   sc:
+      description: lock your chests securely
+   securechests:
+      description: lock your chests securely
+   securechest:
+      description: lock your chests securely
+   schest:
+      description: lock your chests securely
+permissions:
+    securechests.*:
+        description: Gives access to all SecureChest commands
+        children:
+            securechests.lock: true
+            securechests.lock.other: true
+            securechests.lock.transfer: true
+            securechests.bypass.lock: true
+            securechests.bypass.open: true
+            securechests.bypass.break: true
+            securechests.bypass.unlock: true
+            securechests.admin.changeowner: true
+            securechests.admin.reload: true
+            securechests.admin.purge: true
+            securechests.admin.deleteplayer: true
+    securechests.bypass.changeowner:
+        description: Depreciated please use securechests.admin.changeowner
+        children:
+            securechests.admin.chagneowner: true
+    securechests.lock.other:
+        description: Depreciated please use securechests.bypass.lock
+        children:
+            securechests.bypass.lock: true
+    securechests.reload:
+        description: Depreciated please use securechests.admin.reload
+        children:
+            securechests.admin.reload: true
+    securechests.admin.all:
+        description: Allows use of all admin commands
+        children:
+            securechests.admin.purge: true
+            securechests.admin.reload: true
+    securechests.bypass.all:
+        description: Allows use of all bypass commands
+        children:
+            securechests.bypass.lock: true
+            securechests.bypass.open: true
+            securechests.bypass.break: true
+            securechests.bypass.unlock: true
+    securechests.admin.reload:
+        description: Allows you to use the "/sc reload" command
+    securechests.admin.purge:
+        description: Allows you to use the "/sc purge" command
+    securechests.lock:
+        description: Allows you lock allowed blocks.
+    securechests.lock.transfer:
+        description: Allows you to use /sc chagneowner <name> on your own chests.
+    securechests.bypass.lock:
+        description: Allows you to lock blocks for others.
+        default: op
+    securechests.admin.changeowner:
+        description: Allows you to change lock owners.
+        default: op
+    securechests.bypass.open:
+        description: Allows you to open other's locked blocks.
+        default: op
+    securechests.bypass.unlock:
+        description: Allows you to unlock other's blocks.
+        default: op
+    securechests.bypass.break:
+        description: Allows you to break other's locked blocks.
+        default: op
