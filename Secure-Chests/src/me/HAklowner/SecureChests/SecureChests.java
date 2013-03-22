@@ -24,7 +24,7 @@ import me.HAklowner.SecureChests.Utils.MetricsSC;
 import me.HAklowner.SecureChests.Utils.Verblevel;
 import me.HAklowner.SecureChests.Utils.Vlevel;
 
-import net.sacredlabyrinth.phaed.simpleclans.SimpleClans;
+import net.sacredlabyrinth.phaed.simpleclans.SimpleClans2;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -304,7 +304,7 @@ public class SecureChests extends JavaPlugin {
 
 		registerCommands();
 
-		Plugin plug = pm.getPlugin("SimpleClans");
+		Plugin plug = pm.getPlugin("SimpleClans2");
 
 		if (plug instanceof SimpleClans)
 		{

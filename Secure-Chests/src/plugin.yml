@@ -5,7 +5,7 @@ dev-url: http://dev.bukkit.org/server-mods/secure-chests/
 author: HAklowner
 website: http://dev.bukkit.org/server-mods/secure-chests/
 description: SecureChests - Simple chest locking!
-softdepend: [SimpleClans, Vault, ChestShop]
+softdepend: [SimpleClans2, Vault, ChestShop]
 commands:
    lock:
       description: lock your chests
