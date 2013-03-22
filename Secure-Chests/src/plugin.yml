@@ -64,8 +64,10 @@ permissions:
         description: Allows you to use the "/sc purge" command
     securechests.lock:
         description: Allows you lock allowed blocks.
+        default: true
     securechests.lock.transfer:
         description: Allows you to use /sc chagneowner <name> on your own chests.
+        default: true
     securechests.bypass.lock:
         description: Allows you to lock blocks for others.
         default: op
