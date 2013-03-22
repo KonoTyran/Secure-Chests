@@ -1,6 +1,7 @@
 package me.HAklowner.SecureChests.Commands;
 
-import net.sacredlabyrinth.phaed.simpleclans.managers.ClanManager;
+import com.p000ison.dev.simpleclans2.api.clan.ClanManager;
+import com.p000ison.dev.simpleclans2.api.clanplayer.ClanPlayer;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -65,12 +66,12 @@ public class GaddCommand {
 				{ 
 					String clanTag = ChatColor.stripColor(args[0].substring(2));
 					ClanManager cm = plugin.simpleClans.getClanManager();
-					if (cm.isClan(clanTag))
+					if (cm.existsClanByName(clanTag))
 					{
 						if (!plugin.getLockManager().clanOnGlobalList(player.getName(), clanTag))
 						{
 							plugin.getLockManager().addToGlobalList(player.getName(), clanTag, "clan");
-							clanTag = cm.getClan(clanTag).getTagLabel();
+							clanTag = cm.getClan(clanTag).getTag();
 							plugin.sendMessage(Vlevel.COMMAND, player, Config.getLocal(Language.NOTICE_GADD_CLAN).replace("%clantag", clanTag + ChatColor.WHITE));
 						}
 						else

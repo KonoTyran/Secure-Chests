@@ -1,6 +1,7 @@
 package me.HAklowner.SecureChests.Commands;
 
-import net.sacredlabyrinth.phaed.simpleclans.managers.ClanManager;
+import com.p000ison.dev.simpleclans2.api.clan.ClanManager;
+import com.p000ison.dev.simpleclans2.api.clanplayer.ClanPlayer;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -63,9 +64,9 @@ public class GremoveCommand {
 				if (plugin.usingSimpleClans)
 				{
 					ClanManager cm = plugin.simpleClans.getClanManager();
-					if (cm.isClan(clanTag))
+					if (cm.existsClanByName(clanTag))
 					{
-						colorTag = cm.getClan(clanTag).getTagLabel();
+						colorTag = cm.getClan(clanTag).getTag();
 
 					}
 				}

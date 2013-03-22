@@ -24,7 +24,8 @@ import me.HAklowner.SecureChests.Utils.MetricsSC;
 import me.HAklowner.SecureChests.Utils.Verblevel;
 import me.HAklowner.SecureChests.Utils.Vlevel;
 
-import net.sacredlabyrinth.phaed.simpleclans.SimpleClans;
+import com.p000ison.dev.simpleclans2.SimpleClans;
+
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -81,7 +82,9 @@ public class SecureChests extends JavaPlugin {
 	private static Map<Integer, String> createBlockListMap() {
 		Map<Integer, String> result = new HashMap<Integer, String>();
 		result.put(23, "dispenser");
+                result.put(158, "dispenser");
 		result.put(54 , "chest");
+                result.put(146, "trappedchest");
 		result.put(61, "furnace");
 		result.put(62, "furnace");
 		result.put(64, "door");
@@ -95,7 +98,9 @@ public class SecureChests extends JavaPlugin {
 	private static Map<Integer, String> createBlockConfigMap() {
 		Map<Integer, String> result = new HashMap<Integer, String>();
 		result.put(23, "Dispenser");
+                result.put(158, "Dropper");
 		result.put(54, "Chest");
+                result.put(146, "TrappedChest");
 		result.put(61, "Furnace");
 		result.put(62, "Furnace");
 		result.put(64, "Door");
@@ -103,6 +108,7 @@ public class SecureChests extends JavaPlugin {
 		result.put(107, "Gate");
 		result.put(117, "Potion");
 		result.put(84, "Jukebox");
+                result.put(154, "Hopper");
 		return result;	
 	}
 
@@ -304,7 +310,7 @@ public class SecureChests extends JavaPlugin {
 
 		registerCommands();
 
-		Plugin plug = pm.getPlugin("SimpleClans");
+		Plugin plug = pm.getPlugin("SimpleClans2");
 
 		if (plug instanceof SimpleClans)
 		{

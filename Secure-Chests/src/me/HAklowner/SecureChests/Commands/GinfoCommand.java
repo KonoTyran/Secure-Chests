@@ -1,5 +1,6 @@
 package me.HAklowner.SecureChests.Commands;
 
+import com.p000ison.dev.simpleclans2.api.clan.Clan;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -11,7 +12,9 @@ import me.HAklowner.SecureChests.Config.Config;
 import me.HAklowner.SecureChests.Config.Language;
 import me.HAklowner.SecureChests.Utils.Atype;
 import me.HAklowner.SecureChests.Utils.Vlevel;
-import net.sacredlabyrinth.phaed.simpleclans.Clan;
+
+import com.p000ison.dev.simpleclans2.api.clan.ClanManager;
+import com.p000ison.dev.simpleclans2.api.clanplayer.ClanPlayer;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -92,7 +95,7 @@ public class GinfoCommand
 					{
 						Clan c = plugin.simpleClans.getClanManager().getClan(tag);
 						if (c != null) {
-							ctag = c.getTagLabel() + ChatColor.GREEN;
+							ctag = c.getTag() + ChatColor.GREEN;
 						}
 					}
 					fixedlist.add(ctag);
