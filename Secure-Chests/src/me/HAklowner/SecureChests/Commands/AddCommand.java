@@ -1,19 +1,18 @@
 package me.HAklowner.SecureChests.Commands;
 
-import net.sacredlabyrinth.phaed.simpleclans.Clan;
-import net.sacredlabyrinth.phaed.simpleclans.managers.ClanManager;
-
+import com.p000ison.dev.simpleclans2.api.clan.Clan;
+import com.p000ison.dev.simpleclans2.api.clan.ClanManager;
+import com.p000ison.dev.simpleclans2.api.clanplayer.ClanPlayer;
+import me.HAklowner.SecureChests.Config.Config;
+import me.HAklowner.SecureChests.Config.Language;
+import me.HAklowner.SecureChests.Permission;
+import me.HAklowner.SecureChests.SecureChests;
+import me.HAklowner.SecureChests.Utils.Atype;
+import me.HAklowner.SecureChests.Utils.Vlevel;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-
-import me.HAklowner.SecureChests.Permission;
-import me.HAklowner.SecureChests.SecureChests;
-import me.HAklowner.SecureChests.Config.Config;
-import me.HAklowner.SecureChests.Config.Language;
-import me.HAklowner.SecureChests.Utils.Atype;
-import me.HAklowner.SecureChests.Utils.Vlevel;
 
 public class AddCommand {
 
@@ -66,13 +65,13 @@ public class AddCommand {
 				{ 
 					String clanTag = ChatColor.stripColor(args[0].substring(2));
 					ClanManager cm = plugin.simpleClans.getClanManager();
-					if (cm.isClan(clanTag))
+					if (cm.existsClanByName(clanTag))
 					{
 						Clan clan = cm.getClan(clanTag);
 						plugin.scCmd.put(player, 3); //value of 3 add to access list.
 						plugin.scAList.put(player, clan.getTag()); //clan tag.
 						plugin.scAtype.put(player, Atype.Clan); //we want to add a clan.
-						plugin.sendMessage(Vlevel.COMMAND, player, Config.getLocal(Language.INTERACT_ADD_CLAN).replace("%clantag", clan.getTagLabel() + ChatColor.WHITE));
+						plugin.sendMessage(Vlevel.COMMAND, player, Config.getLocal(Language.INTERACT_ADD_CLAN).replace("%clantag", clan.getTag() + ChatColor.WHITE));
 					}
 					else
 					{

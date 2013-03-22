@@ -1,6 +1,7 @@
 package me.HAklowner.SecureChests.Commands;
 
-import net.sacredlabyrinth.phaed.simpleclans.managers.ClanManager;
+import com.p000ison.dev.simpleclans2.api.clan.ClanManager;
+import com.p000ison.dev.simpleclans2.api.clanplayer.ClanPlayer;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -67,8 +68,8 @@ public class RemoveCommand {
 					String colorTag = clanTag;
 					if (plugin.usingSimpleClans) {
 						ClanManager cm = plugin.simpleClans.getClanManager();
-						if (cm.isClan(clanTag)) {
-							colorTag = cm.getClan(clanTag).getTagLabel();
+						if (cm.existsClanByName(clanTag)) {
+							colorTag = cm.getClan(clanTag).getTag();
 						}
 					}
 					plugin.sendMessage(Vlevel.COMMAND, player, Config.getLocal(Language.INTERACT_REMOVE_CLAN).replace("%clantag", colorTag + ChatColor.WHITE));

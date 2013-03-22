@@ -1,7 +1,8 @@
 package me.HAklowner.SecureChests.Commands;
 
-import net.sacredlabyrinth.phaed.simpleclans.Clan;
-import net.sacredlabyrinth.phaed.simpleclans.managers.ClanManager;
+import com.p000ison.dev.simpleclans2.api.clan.Clan;
+import com.p000ison.dev.simpleclans2.api.clan.ClanManager;
+import com.p000ison.dev.simpleclans2.api.clanplayer.ClanPlayer;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -66,7 +67,7 @@ public class DenyCommand {
 				{ 
 					String clanTag = args[0].substring(2);
 					ClanManager cm = plugin.simpleClans.getClanManager();
-					if (cm.isClan(clanTag))
+					if (cm.existsClanByName(clanTag))
 					{
 						Clan clan = cm.getClan(clanTag);
 						plugin.sendMessage(Vlevel.COMMAND, player, Config.getLocal(Language.INTERACT_DENY_CLAN).replace("%clantag", clanTag + ChatColor.WHITE));

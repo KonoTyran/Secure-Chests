@@ -11,12 +11,13 @@ import me.HAklowner.SecureChests.Config.Config;
 import me.HAklowner.SecureChests.Config.Language;
 import me.HAklowner.SecureChests.Utils.Atype;
 import me.HAklowner.SecureChests.Utils.Vlevel;
-import net.sacredlabyrinth.phaed.simpleclans.Clan;
+
+import com.p000ison.dev.simpleclans2.api.clan.Clan;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.Player;    
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -74,7 +75,7 @@ public class SecureChestsPlayerListener implements Listener {
 					Clan clan = plugin.simpleClans.getClanManager().getClan(aListEntry);
 					if (clan != null)
 					{
-						clantag = clan.getTagLabel();
+						clantag = clan.getTag();
 					}
 					else
 					{
@@ -113,8 +114,8 @@ public class SecureChestsPlayerListener implements Listener {
 					{
 						Map<String, Boolean> info = lock.getPlayerAccessList();
 						Set<String> names = info.keySet();
-						Set<String> allow = new HashSet<String>();
-						Set<String> deny = new HashSet<String>();
+						Set<String> allow = new HashSet<>();
+						Set<String> deny = new HashSet<>();
 						if(plugin.usingSimpleClans)
 						{
 							Map<String, Boolean> cinfo = lock.getClanAccessList();
@@ -125,7 +126,7 @@ public class SecureChestsPlayerListener implements Listener {
 								if (c != null)
 								{
 									plugin.sendMessage(Vlevel.DEBUG, player, cname + " found");
-									String ctag = c.getColorTag();
+									String ctag = c.getTag();
 									
 									if (cinfo.get(cname))
 									{
@@ -179,12 +180,14 @@ public class SecureChestsPlayerListener implements Listener {
 						}
 
 						String pub = ChatColor.RED + Config.getLocal(Language.LANG_NO);
-						if (lock.isPublic())
-							pub = ChatColor.GREEN + Config.getLocal(Language.LANG_YES);
+						if (lock.isPublic()) {
+                                                pub = ChatColor.GREEN + Config.getLocal(Language.LANG_YES);
+                                            }
 
 						String reslock = ChatColor.RED + Config.getLocal(Language.LANG_NO);
-						if (lock.isResouseLocked())
-							reslock = ChatColor.GREEN + Config.getLocal(Language.LANG_YES);
+						if (lock.isResouseLocked()) {
+                                                reslock = ChatColor.GREEN + Config.getLocal(Language.LANG_YES);
+                                            }
 
 						plugin.sendMessage(Vlevel.COMMAND, player, ChatColor.GOLD + "======== "+owner+"'s "+blockName+" ========");
 						plugin.sendMessage(Vlevel.COMMAND, player, ChatColor.AQUA + Config.getLocal(Language.PUBLIC) +": " + pub + ChatColor.AQUA + " " + Config.getLocal(Language.RESOURCE_LOCK) +": " + reslock);
