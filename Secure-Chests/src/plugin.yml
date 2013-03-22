@@ -2,7 +2,7 @@ name: SecureChests
 main: me.HAklowner.SecureChests.SecureChests
 version: 0.7.1
 dev-url: http://dev.bukkit.org/server-mods/secure-chests/
-author: HAklowner
+author: [HAklowner,i2]
 website: http://dev.bukkit.org/server-mods/secure-chests/
 description: SecureChests - Simple chest locking!
 softdepend: [SimpleClans2, Vault, ChestShop]
@@ -60,8 +60,10 @@ permissions:
             securechests.bypass.unlock: true
     securechests.admin.reload:
         description: Allows you to use the "/sc reload" command
+        default: op
     securechests.admin.purge:
         description: Allows you to use the "/sc purge" command
+        default: op
     securechests.lock:
         description: Allows you lock allowed blocks.
         default: true
